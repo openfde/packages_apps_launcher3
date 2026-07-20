@@ -750,7 +750,7 @@ public class TaskbarManagerImpl {
             resource.destroyTaskbarForDisplay();
 
             boolean displayExists = getDisplay(displayId) != null;
-            boolean isTaskbarEnabled = dp != null && resource.isTaskbarEnabled();
+            boolean isTaskbarEnabled = false;// dp != null && resource.isTaskbarEnabled();
             resource.debugMsg("recreateTaskbarForDisplay: isTaskbarEnabled=" + isTaskbarEnabled
                     + " [dp != null]=" + (dp != null)
                     + " mUserUnlocked=" + mUserUnlocked

@@ -358,6 +358,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
                 mSplitSelectStateController);
         mActionsView.updateDimension(getDeviceProfile(), overviewPanel.getLastComputedTaskSize());
         mActionsView.updateVerticalMargin(DisplayController.getNavigationMode(this));
+        mActionsView.setVisibility(View.GONE);
 
         mAppTransitionManager = buildAppTransitionManager();
         mAppTransitionManager.registerRemoteAnimations();
