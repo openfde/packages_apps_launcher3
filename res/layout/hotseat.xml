@@ -22,5 +22,6 @@
     android:theme="@style/HomeScreenElementTheme"
     android:importantForAccessibility="no"
     android:clickable="false"
+    android:visibility="gone"
     android:longClickable="false"
     launcher:containerType="hotseat" />

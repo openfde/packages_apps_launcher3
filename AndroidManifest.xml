@@ -40,6 +40,7 @@
         android:label="@string/derived_app_name"
         android:theme="@style/AppTheme"
         android:largeHeap="@bool/config_largeHeap"
+        android:usesCleartextTraffic="true"
         android:restoreAnyVersion="true"
         android:supportsRtl="true" >
 
