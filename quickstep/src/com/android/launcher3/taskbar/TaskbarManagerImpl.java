@@ -766,10 +766,10 @@ public class TaskbarManagerImpl {
                 if (displayId == mPrimaryDisplayId) {
                     mSystemUiProxy.setHasBubbleBar(false);
                 }
-                if (!isTaskbarEnabled || !displayExists) {
+                if (!isTaskbarEnabled || !isLargeScreenTaskbar || !displayExists) {
                     resource.debugMsg(
                             "recreateTaskbarForDisplay: exiting bc (!isTaskbarEnabled || "
-                                    + "!displayExists)");
+                                    + "!isLargeScreenTaskbar || !displayExists)");
                     return;
                 }
             }
