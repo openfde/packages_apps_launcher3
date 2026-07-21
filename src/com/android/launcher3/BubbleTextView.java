@@ -124,6 +124,7 @@ import com.android.launcher3.views.OptionsPopupView;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Locale;
+import android.view.Gravity;
 
 /**
  * TextView that draws a bubble behind the text. We cannot use a LineBackgroundSpan
@@ -320,6 +321,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         mActivity = ActivityContext.lookupContext(context);
         mMinimizedStateDescription = getContext().getString(
                 R.string.app_minimized_state_description);
+        setGravity(Gravity.CENTER);        
         mRunningStateDescription = getContext().getString(R.string.app_running_state_description);
 
         TypedArray a = context.obtainStyledAttributes(attrs,
@@ -1105,9 +1107,9 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
             int mRoundRectPadding = getResources().getDimensionPixelSize(
                     R.dimen.app_title_pill_round_rect_padding);
 
-            setPadding(mAppTitleHorizontalPadding + mRoundRectPadding, getPaddingTop(),
-                    mAppTitleHorizontalPadding + mRoundRectPadding,
-                    getPaddingBottom());
+            // setPadding(mAppTitleHorizontalPadding + mRoundRectPadding, getPaddingTop(),
+            //         mAppTitleHorizontalPadding + mRoundRectPadding,
+            //         getPaddingBottom());
         }
 
         if (shouldUseTwoLine() && (mLastOriginalText != null)) {
@@ -1438,6 +1440,10 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         }
     }
 
+    int dpToPx(int dp) {
+        return (int) (dp * getContext().getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     protected void applyCompoundDrawables(Drawable icon) {
         if (icon == null) {
             // Icon can be null when we use the BubbleTextView for text only.
@@ -1448,7 +1454,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         // same as before.
         mDisableRelayout = mIcon != null;
 
-        icon.setBounds(0, 0, mIconSize, mIconSize);
+        int h = dpToPx(10);//mDeviceProfile.cellHeightPx/2;
+        icon.setBounds(0, h, mIconSize,mIconSize+h);
 
         updateIcon(icon);
 
@@ -1571,6 +1578,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     }
 
     private void updateIcon(Drawable newIcon) {
+        setCompoundDrawablePadding(2);
         if (mLayoutHorizontal) {
             setCompoundDrawablesRelative(newIcon, null, null, null);
         } else {

@@ -345,7 +345,7 @@
     <dimen name="popup_arrow_horizontal_center_offset">26dp</dimen>
     <dimen name="popup_arrow_corner_radius">2dp</dimen>
     <!-- popup_padding_start + deep_shortcut_icon_size + 12dp -->
-    <dimen name="deep_shortcuts_text_padding_start">16dp</dimen>
+    <dimen name="deep_shortcuts_text_padding_start">48dp</dimen>
     <dimen name="system_shortcut_icon_size">20dp</dimen>
     <!-- popup_arrow_horizontal_center_offset - system_shortcut_icon_size / 2 -->
     <dimen name="system_shortcut_margin_start">16dp</dimen>

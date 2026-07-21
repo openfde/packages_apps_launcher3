@@ -440,17 +440,17 @@ public class DragController implements DragDriver.EventListener, TouchController
         for (DragSessionListener listener : new ArrayList<>(mSessionListeners)) {
             listener.onDragSessionStart(mDragObject, mOptions);
         }
-        if (enableDragStartEndMultiDispatch()) {
-            if (mDragDriver == null || mDragDriver.isDragWithinWindow()) {
-                for (DragListener listener : new ArrayList<>(mListeners)) {
-                    listener.onDragStart(mDragObject, mOptions);
-                }
-            }
-        } else {
-            for (DragListener listener : new ArrayList<>(mListeners)) {
-                listener.onDragStart(mDragObject, mOptions);
-            }
-        }
+        // if (enableDragStartEndMultiDispatch()) {
+        //     if (mDragDriver == null || mDragDriver.isDragWithinWindow()) {
+        //         for (DragListener listener : new ArrayList<>(mListeners)) {
+        //             listener.onDragStart(mDragObject, mOptions);
+        //         }
+        //     }
+        // } else {
+        //     for (DragListener listener : new ArrayList<>(mListeners)) {
+        //         listener.onDragStart(mDragObject, mOptions);
+        //     }
+        // }
     }
 
     protected boolean isItemPinnable() {

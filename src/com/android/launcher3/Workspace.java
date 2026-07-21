@@ -488,7 +488,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         mWorkspaceScreens.forEach(cellLayout -> {
             // cellLayout.setPadding(padding.left, padding.top, padding.right, padding.bottom);
             float newVal = Settings.System.getFloat(getContext().getContentResolver(), "dock_scale",1.0f) * DOCK_HEIGHT;
-            cellLayout.setPadding(padding.left, 0, padding.right, dpToPx(Math.round(newVal))  );
+            cellLayout.setPadding(padding.left, 30, padding.right, dpToPx(Math.round(newVal))  );
             cellLayout.setSpaceBetweenCellLayoutsPx(getPageSpacing() / 4);
         });
     }
