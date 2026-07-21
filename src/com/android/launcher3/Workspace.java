@@ -176,6 +176,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import android.graphics.Color;
+import android.provider.Settings;
+
 /**
  * The workspace is a wide area with a wallpaper and a finite number of pages.
  * Each page contains a number of icons, folders or widgets the user can
@@ -207,6 +210,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private static final int ADJACENT_SCREEN_DROP_DURATION = 300;
 
     public static final int DEFAULT_PAGE = 0;
+
+    private static final int DOCK_HEIGHT = 68;
 
     private final int mAllAppsIconSize;
 
@@ -446,8 +451,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         mWorkspaceFadeInAdjacentScreens = grid.shouldFadeAdjacentWorkspaceScreens();
 
         Rect padding = grid.getWorkspaceProfile().getWorkspacePadding();
-        setPadding(padding.left, padding.top, padding.right, padding.bottom);
-        mInsets.set(insets);
+        // setPadding(padding.left, padding.top, padding.right, padding.bottom);
+        // mInsets.set(insets);
 
         if (mWorkspaceFadeInAdjacentScreens) {
             // In landscape mode the page spacing is set to the default.
@@ -460,7 +465,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             int maxPadding = Math.max(
                     grid.getWorkspaceProfile().getEdgeMarginPx(), padding.left + 1
             );
-            setPageSpacing(Math.max(maxInsets, maxPadding));
+            // setPageSpacing(Math.max(maxInsets, maxPadding));
         }
 
         updateCellLayoutMeasures();
@@ -481,9 +486,15 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private void updateCellLayoutMeasures() {
         Rect padding = mLauncher.getDeviceProfile().getWorkspaceProfile().getCellLayoutPaddingPx();
         mWorkspaceScreens.forEach(cellLayout -> {
-            cellLayout.setPadding(padding.left, padding.top, padding.right, padding.bottom);
+            // cellLayout.setPadding(padding.left, padding.top, padding.right, padding.bottom);
+            float newVal = Settings.System.getFloat(getContext().getContentResolver(), "dock_scale",1.0f) * DOCK_HEIGHT;
+            cellLayout.setPadding(padding.left, 0, padding.right, dpToPx(Math.round(newVal))  );
             cellLayout.setSpaceBetweenCellLayoutsPx(getPageSpacing() / 4);
         });
+    }
+
+    int dpToPx(int dp) {
+        return (int) (dp * getContext().getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void updateWorkspaceWidgetsSizes() {
@@ -579,7 +590,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         // action for move/add to homescreen.
         // When a accessible drag is started by the folder, we only allow rearranging withing the
         // folder.
-        boolean addNewPage = !(options.isAccessibleDrag && dragObject.dragSource != this);
+        boolean addNewPage = false;//!(options.isAccessibleDrag && dragObject.dragSource != this);
         if (addNewPage) {
             mDeferRemoveExtraEmptyScreen = false;
             addExtraEmptyScreenOnDrag(dragObject);

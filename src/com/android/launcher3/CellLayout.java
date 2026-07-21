@@ -1798,7 +1798,7 @@ public class CellLayout extends ViewGroup {
         if (cellXY == null) {
             cellXY = new int[2];
         }
-        return mOccupied.findVacantCell(cellXY, spanX, spanY);
+        return mOccupied.findVacantCellVertical(cellXY, spanX, spanY);
     }
 
     /**
