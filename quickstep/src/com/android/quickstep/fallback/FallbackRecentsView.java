@@ -59,6 +59,7 @@ import kotlin.Unit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import android.util.Log;
 
 public abstract class FallbackRecentsView<CONTAINER_TYPE extends Context & RecentsViewContainer
         & StatefulContainer<RecentsState>> extends RecentsView<CONTAINER_TYPE, RecentsState>
@@ -122,6 +123,7 @@ public abstract class FallbackRecentsView<CONTAINER_TYPE extends Context & Recen
             RemoteTargetHandle[] remoteTargetHandles, boolean isHandlingAtomicEvent) {
         super.onPrepareGestureEndAnimation(animatorSet, endTarget, remoteTargetHandles,
                 isHandlingAtomicEvent);
+        Log.d(TAG, "bella_launcher onPrepareGestureEndAnimation: isHandlingAtomicEvent=" + isHandlingAtomicEvent);
         if (mHomeTask != null && endTarget == RECENTS) {
             TaskView homeTaskView = getTaskViewByTaskId(mHomeTask.key.id);
             if (homeTaskView != null) {

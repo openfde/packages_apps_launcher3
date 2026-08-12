@@ -265,24 +265,24 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
 
     override fun onDrag(displacement: Float): Boolean {
         taskBeingDragged ?: return false
-        val currentDisplacement = displacement + initialDisplacement
-        val boundedDisplacement =
-            boundToRange(abs(currentDisplacement), 0f, dismissLength.toFloat())
-        // When swiping below origin, allow slight undershoot to simulate resisting the movement.
-        val isAboveOrigin =
-            recentsView.pagedOrientationHandler.isGoingUp(currentDisplacement, isRtl)
-        val totalDisplacement =
-            when {
-                !isAboveOrigin -> getBoundedDisplacement(boundedDisplacement, maxUndershoot) * -1
-
-                !allowDetach -> getBoundedDisplacement(boundedDisplacement, maxAttachOvershoot)
-
-                else -> boundedDisplacement
-            } * verticalFactor
-        val dismissFraction = displacement / (dismissLength * verticalFactor).toFloat()
-        taskDragDisplacementValue?.input = totalDisplacement
-        RECENTS_SCALE_PROPERTY.setValue(recentsView, getRecentsScale(dismissFraction))
-        playDismissThresholdHaptic(displacement)
+//        val currentDisplacement = displacement + initialDisplacement
+//        val boundedDisplacement =
+//            boundToRange(abs(currentDisplacement), 0f, dismissLength.toFloat())
+//        // When swiping below origin, allow slight undershoot to simulate resisting the movement.
+//        val isAboveOrigin =
+//            recentsView.pagedOrientationHandler.isGoingUp(currentDisplacement, isRtl)
+//        val totalDisplacement =
+//            when {
+//                !isAboveOrigin -> getBoundedDisplacement(boundedDisplacement, maxUndershoot) * -1
+//
+//                !allowDetach -> getBoundedDisplacement(boundedDisplacement, maxAttachOvershoot)
+//
+//                else -> boundedDisplacement
+//            } * verticalFactor
+//        val dismissFraction = displacement / (dismissLength * verticalFactor).toFloat()
+//        taskDragDisplacementValue?.input = totalDisplacement
+//        RECENTS_SCALE_PROPERTY.setValue(recentsView, getRecentsScale(dismissFraction))
+//        playDismissThresholdHaptic(displacement)
         return true
     }
 
@@ -309,7 +309,7 @@ class TaskViewDismissTouchController<CONTAINER, T : BaseState<T>>(
     override fun onDragEnd(velocity: Float) {
         val taskBeingDragged = taskBeingDragged ?: return
 
-        Log.d(TAG, "onDragEnd: committing task drag end for dismissal")
+        Log.d(TAG, "bella_launcher onDragEnd: committing task drag end for dismissal")
         taskDragDisplacementValue?.dispose()
         taskBeingDragged.isBeingDraggedForDismissal = false
 

@@ -49,22 +49,22 @@ class OverflownAppsViewController(
             )
         }
 
-        val dragController = activityContext.dragController
-        val taskbarViewDragDropController =
-            activityContext.controllers.taskbarViewDragDropController
-        taskbarViewDragDropController.addOverflowDropTarget(
-            dragController,
-            overflownAppsContainerView,
-        )
-        overflownAppsContainerView.addOnCloseCallback {
-            taskbarViewDragDropController.removeOverflowDropTarget(dragController)
-            overflowIcon.setOnChangeListener(null)
-        }
-
-        overflowIcon.setOnChangeListener {
-            overflownAppsContainerView.setOverflownApps(overflowIcon.overflowInfoList)
-            updateRunningAppState()
-        }
+//        val dragController = activityContext.dragController
+//        val taskbarViewDragDropController =
+//            activityContext.controllers.taskbarViewDragDropController
+//        taskbarViewDragDropController.addOverflowDropTarget(
+//            dragController,
+//            overflownAppsContainerView,
+//        )
+//        overflownAppsContainerView.addOnCloseCallback {
+//            taskbarViewDragDropController.removeOverflowDropTarget(dragController)
+//            overflowIcon.setOnChangeListener(null)
+//        }
+//
+//        overflowIcon.setOnChangeListener {
+//            overflownAppsContainerView.setOverflownApps(overflowIcon.overflowInfoList)
+//            updateRunningAppState()
+//        }
     }
 
     fun show(overflownApps: List<ItemInfo>) {

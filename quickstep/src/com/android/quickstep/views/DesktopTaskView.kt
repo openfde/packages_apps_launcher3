@@ -32,6 +32,7 @@ import android.util.Log
 import android.view.Display.INVALID_DISPLAY
 import android.view.Gravity
 import android.view.View
+import android.widget.Button;
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -67,6 +68,9 @@ import com.android.quickstep.util.RecentsOrientedState
 import com.android.quickstep.util.getRemoteTargetHandle
 import com.android.systemui.shared.system.InteractionJankMonitorWrapper
 import kotlin.math.roundToInt
+import android.view.MotionEvent;
+import com.android.quickstep.SystemUiProxy;
+import com.android.wm.shell.shared.desktopmode.DesktopModeTransitionSource;
 
 /** TaskView that contains all tasks that are part of the desktop. */
 class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
@@ -76,7 +80,7 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
         type = TaskViewType.DESKTOP,
         thumbnailFullscreenParams = DesktopFullscreenDrawParams(context),
     ) {
-    private val desktopTask: DesktopTask?
+     val desktopTask: DesktopTask?
         get() = groupTask as? DesktopTask
 
     val deskId
@@ -101,9 +105,12 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
             VIEW_POOL_INITIAL_SIZE,
         )
 
+
+
     private val tempPointF = PointF()
     private val lastComputedTaskSize = Rect()
     private lateinit var iconView: IconAppChipView
+    private lateinit var closeButton: Button
     private lateinit var iconTouchDelegate: TransformingTouchDelegate
     private lateinit var contentView: DesktopTaskContentView
     private lateinit var backgroundView: View
@@ -144,6 +151,33 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
 
     override val displayId: Int
         get() = desktopTask?.displayId ?: INVALID_DISPLAY
+
+    private var hoverSnapRunnable: Runnable? = null
+    override fun onHoverEvent(event: MotionEvent): Boolean {
+        val handled = super.onHoverEvent(event)
+        when (event.action) {
+            MotionEvent.ACTION_HOVER_ENTER -> {
+                hoverSnapRunnable?.let { removeCallbacks(it) }
+                val runnable = Runnable {
+                    recentsView?.let { recents ->
+                        val index = recents.indexOfChild(this)
+                        if (index >= 0 && index != recents.nextPage) {
+                            recents.snapToPage(index)
+                        }
+                    }
+                }
+                hoverSnapRunnable = runnable
+                postDelayed(runnable, 150)
+                Log.d(TAG, "bella_launcher onHoverEvent HOVER_ENTER, deskId=$deskId")
+            }
+            MotionEvent.ACTION_HOVER_EXIT -> {
+                hoverSnapRunnable?.let { removeCallbacks(it) }
+                hoverSnapRunnable = null
+                Log.d(TAG, "bella_launcher onHoverEvent HOVER_EXIT, deskId=$deskId")
+            }
+        }
+        return handled
+    }
 
     override fun initialiseInjectables(component: ActivityContextComponent) {
         component.inject(this)
@@ -358,7 +392,13 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
             }
         iconTouchDelegate = TransformingTouchDelegate(iconView)
 
+        closeButton = findViewById<Button>(R.id.close_button)
+        closeButton.setOnClickListener {
+            SystemUiProxy.INSTANCE.get(context).removeDesk(desktopTask.deskId,DesktopModeTransitionSource.RECENTS )
+        }
+
         val backgroundViewIndex = contentView.indexOfChild(backgroundView)
+        Log.d(TAG, "bella_launcher bind tasks "+tasks.size  + " ,deskId: "+desktopTask.deskId+ " ,displayId: "+desktopTask.displayId)
         taskContainers =
             tasks.map { task ->
                 val taskContentView = taskContentViewPool.view
@@ -503,7 +543,7 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
     override fun updateFullscreenParams() {
         super.updateFullscreenParams()
         updateFullscreenParams(contentViewFullscreenParams)
-        contentView.cornerRadius = contentViewFullscreenParams.currentCornerRadius
+//        contentView.cornerRadius = contentViewFullscreenParams.currentCornerRadius
     }
 
     override fun addChildrenForAccessibility(outChildren: ArrayList<View>) {

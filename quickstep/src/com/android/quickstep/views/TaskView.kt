@@ -118,6 +118,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import android.content.ClipData
+import android.content.ClipDescription
+import android.view.DragEvent
 
 /** A task in the Recents view. */
 open class TaskView
@@ -605,6 +608,7 @@ constructor(
         previouslyFocusedRect: Rect?,
     ) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+        Log.d(TAG, "bella_launcher onFocusChanged "+gainFocus  + ",direction "+direction );
         if (borderEnabled) {
             focusBorderAnimator.setBorderVisibility(gainFocus, /* animated= */ true)
         }
@@ -855,12 +859,30 @@ constructor(
     }
 
     protected open fun inflateViewStubs() {
-        findViewById<ViewStub>(R.id.task_content_view)
+       val taskContentView = findViewById<ViewStub>(R.id.task_content_view)
             ?.apply {
                 inflatedId = R.id.task_content_view
                 layoutResource = R.layout.task_content_view
             }
             ?.inflate()
+        Log.d(TAG,"bella_launcher inflateViewStubs........");
+
+//        taskContentView?.setOnLongClickListener { view ->
+//            // 1. 创建需要传递的数据 (ClipData)
+//            val item = ClipData.Item("Drag")
+//            val mimeTypes = arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN)
+//            val clipData = ClipData("DragData", mimeTypes, item)
+//
+//            // 2. 创建拖拽阴影 (跟随手指移动的视觉效果)
+//            val shadowBuilder = View.DragShadowBuilder(view)
+//
+//            // 3. 开始拖拽 (兼容高低版本，建议用 startDragAndDrop)
+//            // 参数依次为: ClipData, 阴影建造者, 本地附加对象(可选), 标志位
+//            view.startDragAndDrop(clipData, shadowBuilder, null, 0)
+//
+//            // 返回 true 表示长按事件已被消费
+//            true
+//        }
 
         if (!enableRefactorDigitalWellbeingToast()) {
             findViewById<ViewStub>(R.id.digital_wellbeing_toast)
@@ -902,6 +924,7 @@ constructor(
                             {
                                 // Update the layout UI to remove this task from the layout grid,
                                 // and remove the task from ActivityManager afterwards.
+                                Log.d(TAG,"bella_launcher updateTaskViewState  dismissTask taskId:  "+taskId  + ",groupTask: "+groupTask  + " ,isRunningTask: "+isRunningTask  + ",isSelectedTask  "+isSelectedTask)
                                 recentsView?.dismissTask(taskId, /* removeTask= */ true)
                             }
                         } else {

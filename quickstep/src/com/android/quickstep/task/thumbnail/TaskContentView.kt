@@ -58,6 +58,16 @@ import com.android.quickstep.util.setActivityStarterClickListener
 import com.android.quickstep.views.RecentsViewContainer
 import com.android.quickstep.views.TaskHeaderView
 import com.android.wm.shell.shared.split.SplitBounds
+import android.content.ClipData
+import android.content.ClipDescription
+import android.view.DragEvent
+import android.util.Log
+import com.android.quickstep.SystemUiProxy;
+import com.android.quickstep.views.DesktopTaskView
+import com.android.quickstep.views.DesktopTaskContentView
+import com.android.quickstep.util.DesktopTask
+import com.android.quickstep.util.GroupTask
+import com.android.wm.shell.shared.desktopmode.DesktopModeTransitionSource
 
 /**
  * TaskContentView is a wrapper around the TaskHeaderView, TaskThumbnailView and Digital wellbeing
@@ -74,6 +84,9 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
     private var taskThumbnailView: TaskThumbnailView? = null
     private val useComposeTaskAppTimer
         get() = enableRefactorDigitalWellbeingToast()
+
+    private var currentTaskId: Int? = null
+
 
     @Deprecated("This toast is getting replaced by the compose version taskAppTimerToastCompose")
     private var taskAppTimerToast: TextView? = null
@@ -138,6 +151,43 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
                 it.getColor(R.styleable.TaskContentView_focusBorderColor, DEFAULT_BORDER_COLOR)
             hoverBorderColor =
                 it.getColor(R.styleable.TaskContentView_hoverBorderColor, DEFAULT_BORDER_COLOR)
+        }
+
+        setOnLongClickListener { view ->
+            val item = ClipData.Item("Drag")
+            val mimeTypes = arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN)
+            val clipData = ClipData("DragData", mimeTypes, item)
+            val shadowBuilder = View.DragShadowBuilder(this)
+            this.startDragAndDrop(clipData, shadowBuilder, null, 0)
+            true
+        }
+
+        setOnDragListener { v, event ->
+//            Log.d(TAG, "Drag start, currentTaskId=$currentTaskId, curTouchTaskId=$curTouchTaskId,  deskId=${findDeskId()}")
+//            if (v !== this) return@setOnDragListener false
+                when (event.action) {
+                    DragEvent.ACTION_DRAG_STARTED -> {
+                        isDraging = true
+                        Log.d(TAG, "Drag start, taskId=$currentTaskId, taskId=$curTouchTaskId,  deskId=${findDeskId()}")
+                        true
+                    }
+                    DragEvent.ACTION_DRAG_LOCATION -> {
+                        val loc = IntArray(2)
+                        v.getLocationInWindow(loc)
+                        sLastDragScreenX = loc[0] + event.x.toInt()
+                        sLastDragScreenY = loc[1] + event.y.toInt()
+                        true
+                    }
+                    DragEvent.ACTION_DRAG_ENDED -> {
+                        Log.d(TAG, "Drag end, currentTaskId=$currentTaskId,curTouchTaskId=$curTouchTaskId, deskId=${findDeskId()}")
+                        if(curTouchTaskId == currentTaskId){
+                            handleDragEnded()
+                        }
+                        isDraging = false
+                        true
+                    }
+                    else -> false
+                }
         }
     }
 
@@ -223,7 +273,7 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
         previouslyFocusedRect: Rect?,
     ) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-
+        Log.d(TAG, "bella_launcher onFocusChanged "+gainFocus  + ",direction "+direction );
         activeFocusAnimator?.cancel()
         activeFocusAnimator = animateBorder(focusBorderAnimator, gainFocus)
     }
@@ -232,6 +282,11 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
         if (!isHoverable) return false
         when (event.action) {
             MotionEvent.ACTION_HOVER_ENTER -> {
+                if (!isDraging!!) {
+                    curTouchTaskId = currentTaskId
+                    curTouchDeskId = findDeskId();
+                }
+                Log.d(TAG, "Hover enter, taskId=$currentTaskId, deskId=${curTouchDeskId}")
                 hoverBorderVisible = true
             }
             MotionEvent.ACTION_HOVER_EXIT -> {
@@ -286,6 +341,72 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
         }
     }
 
+    private fun handleDragEnded() {
+        val taskId = currentTaskId ?: return
+        val sourceDeskId =  curTouchDeskId ;//findDeskId() ?: return
+
+        val targetDesktopView = findDesktopTaskViewAt(sLastDragScreenX, sLastDragScreenY)
+        val targetDeskId = targetDesktopView?.deskId
+        if (targetDeskId == null || targetDeskId == sourceDeskId) {
+            Log.d(TAG, "Drag ended - no valid target desk (targetDeskId=$targetDeskId, sourceDeskId=$sourceDeskId)")
+            return
+        }
+
+        Log.d(TAG, "Moving task $taskId from desk $sourceDeskId to desk $targetDeskId")
+        SystemUiProxy.INSTANCE.get(context).moveTaskToDesk(taskId, targetDeskId)
+
+    }
+
+    private fun findDesktopTaskViewAt(screenX: Int, screenY: Int): DesktopTaskView? {
+        var view: View? = this
+        while (view != null) {
+            if (view.parent is android.view.ViewGroup) {
+                val parent = view.parent as android.view.ViewGroup
+                if (parent is com.android.quickstep.views.RecentsView<*, *>) {
+                    for (i in 0 until parent.childCount) {
+                        val child = parent.getChildAt(i)
+                        if (child is DesktopTaskView) {
+                            val location = IntArray(2)
+                            child.getLocationInWindow(location)
+                            val left = location[0]
+                            val top = location[1]
+                            val right = left + child.width
+                            val bottom = top + child.height
+                            if (screenX in left..right && screenY in top..bottom) {
+                                return child
+                            }
+                        }
+                    }
+                    break
+                }
+            }
+            view = view.parent as? View
+        }
+        return null
+    }
+
+    private fun findDeskId(): Int? {
+        var parent = parent
+        while (parent != null) {
+            if (parent is DesktopTaskView) {
+                return parent.deskId
+            }
+            parent = parent.parent
+        }
+        return null
+    }
+
+    private fun findSelectedTaskId(): GroupTask? {
+        var parent = parent
+        while (parent != null) {
+            if (parent is DesktopTaskView) {
+                return parent?.groupTask
+            }
+            parent = parent.parent
+        }
+        return null
+    }
+
     private fun createTaskThumbnailView() {
         if (taskThumbnailView == null) {
             taskThumbnailView =
@@ -335,6 +456,7 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
         taskAppTimerUiState: TaskAppTimerUiState,
         taskId: Int?,
     ) {
+        currentTaskId = taskId
         createHeaderView(taskHeaderState)
         taskHeaderView?.setState(taskHeaderState)
         taskThumbnailView?.setState(taskThumbnailUiState, taskId)
@@ -503,6 +625,11 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
 
     companion object {
         const val TAG = "TaskContentView"
+        private var sLastDragScreenX = 0
+        private var sLastDragScreenY = 0
+        private var curTouchTaskId: Int? = null
+        private var curTouchDeskId: Int? = null
+        private var isDraging: Boolean? = false
 
         private fun appUsageSettingsIntent(packageName: String) =
             Intent(Intent(Settings.ACTION_APP_USAGE_SETTINGS))

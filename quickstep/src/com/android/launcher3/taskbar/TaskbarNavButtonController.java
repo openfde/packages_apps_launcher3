@@ -370,6 +370,7 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
     }
 
     private void navigateToOverview() {
+        Log.w(TAG,"navigateToOverview  mScreenPinned  "+mScreenPinned + ",mDisplayId "+mDisplayId);
         if (mScreenPinned) {
             return;
         }
