@@ -20,7 +20,6 @@ import static android.view.View.VISIBLE;
 
 import static com.android.launcher3.AbstractFloatingView.TYPE_DISCOVERY_BOUNCE;
 import static com.android.launcher3.Flags.enableDragStartEndMultiDispatch;
-import static com.android.launcher3.Flags.enableSystemDrag;
 import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_NOT_PINNABLE;
 
 import android.content.res.Resources;
@@ -697,10 +696,6 @@ public class DragController implements DragDriver.EventListener, TouchController
      * Note that potential handlers are prioritized by reverse chronological registration time.
      */
     public boolean onDragEvent(DragEvent event) {
-        if (!enableSystemDrag()) {
-            return mDragDriver != null && mDragDriver.onDragEvent(event);
-        }
-
         // Case: Handle system drag start.
         if (event.getAction() == DragEvent.ACTION_DRAG_STARTED) {
             for (int i = mSystemDragHandlers.size() - 1; i >= 0; i--) {
@@ -949,9 +944,7 @@ public class DragController implements DragDriver.EventListener, TouchController
      * @param handler The handler to register
      */
     public void addSystemDragHandler(SystemDragHandler handler) {
-        if (enableSystemDrag()) {
-            mSystemDragHandlers.add(handler);
-        }
+        mSystemDragHandlers.add(handler);
     }
 
     /**
@@ -961,9 +954,6 @@ public class DragController implements DragDriver.EventListener, TouchController
      * @param handler The handler to unregister
      */
     public void removeSystemDragHandler(SystemDragHandler handler) {
-        if (!enableSystemDrag()) {
-            return;
-        }
         mSystemDragHandlers.remove(handler);
         if (mLastSystemDragHandler == handler) {
             mLastSystemDragHandler = null;

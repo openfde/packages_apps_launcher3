@@ -16,7 +16,6 @@
 
 package com.android.launcher3.dragndrop;
 
-import static com.android.launcher3.Flags.enableSystemDrag;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APP_GROUP;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT;
@@ -131,9 +130,7 @@ public abstract class BaseItemDragListener<T extends ActivityContext>
         mContext = context;
         mDragController = context.getDragController();
 
-        if (!enableSystemDrag()) {
-            mContext.getDragLayer().setOnDragListener(this);
-        } else if (mDragController != null) {
+        if (mDragController != null) {
             mDragController.addSystemDragHandler(this);
         }
     }
@@ -155,7 +152,7 @@ public abstract class BaseItemDragListener<T extends ActivityContext>
                 return false;
             }
         }
-        return enableSystemDrag() || mDragController.onDragEvent(event);
+        return true;
     }
 
     @Override
@@ -230,18 +227,11 @@ public abstract class BaseItemDragListener<T extends ActivityContext>
     }
 
     public void removeListener() {
-        final boolean enableSystemDrag = enableSystemDrag();
-
-        if (mContext != null) {
-            if (mContext instanceof Launcher launcher) {
-                launcher.getRotationHelper().setStateHandlerRequest(REQUEST_NONE);
-            }
-            if (!enableSystemDrag) {
-                mContext.getDragLayer().setOnDragListener(null);
-            }
+        if (mContext != null && mContext instanceof Launcher launcher) {
+            launcher.getRotationHelper().setStateHandlerRequest(REQUEST_NONE);
         }
 
-        if (enableSystemDrag && mDragController != null) {
+        if (mDragController != null) {
             mDragController.removeSystemDragHandler(this);
         }
     }

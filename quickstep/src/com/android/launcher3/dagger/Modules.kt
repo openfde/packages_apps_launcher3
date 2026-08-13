@@ -28,7 +28,6 @@ import com.android.internal.R
 import com.android.internal.policy.DesktopModeCompatPolicy
 import com.android.internal.util.LatencyTracker
 import com.android.launcher3.AbstractFloatingViewHelper
-import com.android.launcher3.Flags.enableSystemDrag
 import com.android.launcher3.Launcher
 import com.android.launcher3.automation.AutomationRepository
 import com.android.launcher3.backuprestore.LauncherRestoreEventLogger
@@ -275,7 +274,7 @@ object SystemDragModule {
         factory: SystemDragControllerImpl.Factory,
     ): SystemDragController =
         // TODO(b/456787959): Fix drop targets and enable for other contexts.
-        if (enableSystemDrag() && context is Launcher) {
+        if (context is Launcher) {
             factory.create(HomeScreenFilesUtils.isFeatureEnabled)
         } else {
             SystemDragControllerStub()

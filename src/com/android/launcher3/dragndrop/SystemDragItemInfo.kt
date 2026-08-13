@@ -93,4 +93,15 @@ class SystemDragItemInfo : WorkspaceItemInfo() {
 
     /** Similar to [java.util.concurrent.atomic.AtomicReference] but w/o concurrency guarantees. */
     private data class Reference<T>(var value: T)
+
+    /**
+     * Represents an app launch payload dropped from the SystemUI app list. Only the package name is
+     * carried across the process boundary; the launcher derives the icon, title and launch intent
+     * itself via PackageManager/LauncherApps.
+     *
+     * @param packageName The package name of the app being added to the home screen.
+     */
+    data class AppLaunchPayload(val packageName: String?) : Payload() {
+        override fun isAcceptable(): Boolean = packageName?.isNotEmpty() == true
+    }
 }
