@@ -1652,9 +1652,7 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
         }
 
 
-        taskbarWindowSize = mDeviceProfile.getTaskbarProfile().getHeight()
-                + getCornerRadius()
-                + extraHeightForTaskbarTooltips;
+        taskbarWindowSize = mDeviceProfile.getTaskbarProfile().getHeight();
         return Math.max(taskbarWindowSize, bubbleBarTop);
     }
 

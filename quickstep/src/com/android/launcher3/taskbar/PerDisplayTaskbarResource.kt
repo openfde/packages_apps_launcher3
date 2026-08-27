@@ -66,14 +66,19 @@ class PerDisplayTaskbarResource(
     private var oldConfig = windowContext.resources.configuration
     private var displayChangeSafeClosable: SafeCloseable? = null
 
+    /** When true a plugin owns the taskbar content, so touches are not forwarded to the drag layer. */
+    private var pluginMode = false
+
     val rootLayout: FrameLayout =
         object : FrameLayout(windowContext) {
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
                 // The motion events can be outside the view bounds of task bar, and hence
                 // manually dispatching them to the drag layer here.
-                val dragLayer = taskbar?.dragLayer
-                if (dragLayer != null && dragLayer.isAttachedToWindow) {
-                    return dragLayer.dispatchTouchEvent(ev)
+                if (!pluginMode) {
+                    val dragLayer = taskbar?.dragLayer
+                    if (dragLayer != null && dragLayer.isAttachedToWindow) {
+                        return dragLayer.dispatchTouchEvent(ev)
+                    }
                 }
                 return super.dispatchTouchEvent(ev)
             }
@@ -200,6 +205,11 @@ class PerDisplayTaskbarResource(
         if (!isDestroyed) {
             viewManager.addView(activity.windowLayoutParams)
         }
+    }
+
+    /** Enables or disables plugin ownership of the taskbar content. */
+    fun setPluginMode(enabled: Boolean) {
+        pluginMode = enabled
     }
 
     fun destroyTaskbarForDisplay() {

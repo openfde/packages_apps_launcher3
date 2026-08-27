@@ -28,10 +28,12 @@
         android:gravity="center"
         android:forceHasOverlappingRendering="false"
         android:layout_gravity="bottom"
+        android:visibility="invisible"
         android:clipChildren="false" />
 
     <com.android.launcher3.taskbar.TaskbarScrimView
         android:id="@+id/taskbar_scrim"
+        android:visibility="invisible"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
@@ -39,6 +41,7 @@
         android:id="@+id/taskbar_bubbles_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:visibility="invisible"
         android:clipChildren="false">
 
         <com.android.launcher3.taskbar.bubbles.BubbleBarView
@@ -58,6 +61,7 @@
         android:id="@+id/navbuttons_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:visibility="invisible"
         android:layout_gravity="bottom" >
 
         <FrameLayout
@@ -99,6 +103,7 @@
         tools:comment1="The actual size and shape will be set as a ViewOutlineProvider at runtime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:visibility="invisible"
         android:background="@color/taskbar_stashed_handle_dark_color"
         android:clipToOutline="true"
         android:layout_gravity="bottom"/>

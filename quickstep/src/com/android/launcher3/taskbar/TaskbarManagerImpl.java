@@ -83,6 +83,7 @@ import com.android.launcher3.taskbar.unfold.NonDestroyableScopedUnfoldTransition
 import com.android.launcher3.util.ListenableStream;
 import com.android.launcher3.util.LockedUserState;
 import com.android.launcher3.util.MutableListenableStream;
+import com.android.launcher3.util.PluginManagerWrapper;
 import com.android.launcher3.util.PostUnlockObject;
 import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.SafeCloseable;
@@ -102,6 +103,8 @@ import com.android.quickstep.util.SystemUiFlagUtils;
 import com.android.quickstep.views.RecentsViewContainer;
 import com.android.quickstep.views.RecentsViewContainerInteractor;
 import com.android.quickstep.window.RecentsWindowManager;
+import com.android.systemui.plugins.PluginListener;
+import com.android.systemui.plugins.TaskbarPlugin;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 import com.android.systemui.shared.system.ActivityManagerWrapper;
 import com.android.systemui.shared.system.QuickStepContract;
@@ -124,7 +127,7 @@ import javax.inject.Provider;
  * Class to manage taskbar lifecycle
  */
 @SysUIConnectionSingleton
-public class TaskbarManagerImpl {
+public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
     private static final String TAG = "TaskbarManager";
     private static final boolean DEBUG = false;
     private static final int TASKBAR_DESTROY_DURATION = 100;
@@ -237,6 +240,8 @@ public class TaskbarManagerImpl {
 
     private final AllAppsActionManager mAllAppsActionManager;
     private AmbientCueRepository mAmbientCueRepository;
+
+    private volatile @Nullable TaskbarPlugin mTaskbarPlugin;
 
     private @Nullable SafeCloseable mActivityOnDestroySafeCloseable;
 
@@ -395,6 +400,10 @@ public class TaskbarManagerImpl {
         cleanupTasks.addCloseable(getTaskbarUiThread(), mUnlockedIDP);
         mPrimaryResource.debugMsg("TaskbarManager created");
 
+        // Register for a taskbar plugin so a custom taskbar can replace the default content.
+        PluginManagerWrapper.INSTANCE.get(mBaseContext).addPluginListener(this,
+                TaskbarPlugin.class, false /* allowMultiple */);
+
         cleanupTasks.addTask(getTaskbarUiThread(), () -> {
             mPrimaryResource.debugMsg("TaskbarManager#destroy()");
             mRecentsViewContainerInteractor = null;
@@ -404,6 +413,43 @@ public class TaskbarManagerImpl {
             mBootAppContext = null;
             removeActivityCallbacksAndListeners();
         });
+    }
+
+    @Override
+    public void onPluginConnected(TaskbarPlugin plugin, Context context) {
+        mTaskbarPlugin = plugin;
+        // Directly apply to existing taskbars instead of fully recreating them (slow).
+        getTaskbarUiThread().execute(this::applyPluginToExistingTaskbars);
+    }
+
+    @Override
+    public void onPluginDisconnected(TaskbarPlugin plugin) {
+        mTaskbarPlugin = null;
+        getTaskbarUiThread().execute(this::recreateTaskbars);
+    }
+
+    private void applyPluginToExistingTaskbars() {
+        mResources.forEach(resource -> {
+            TaskbarActivityContext taskbar = resource.getTaskbar();
+            if (taskbar != null) {
+                applyTaskbarPlugin(taskbar, resource, resource.getRootLayout());
+            }
+        });
+    }
+
+    private void applyTaskbarPlugin(TaskbarActivityContext taskbar,
+            PerDisplayTaskbarResource resource, FrameLayout rootLayout) {
+        TaskbarPlugin plugin = mTaskbarPlugin;
+        resource.setPluginMode(plugin != null);
+        if (plugin != null) {
+            // Hide the default taskbar (and its background) and let the plugin own the content.
+            taskbar.getDragLayer().setVisibility(View.GONE);
+            plugin.setup(rootLayout);
+        } else {
+            // Plugin not loaded yet: keep the taskbar transparent/invisible instead of showing
+            // the default white background.
+            taskbar.getDragLayer().setVisibility(View.INVISIBLE);
+        }
     }
 
     @VisibleForTesting
@@ -750,7 +796,7 @@ public class TaskbarManagerImpl {
             resource.destroyTaskbarForDisplay();
 
             boolean displayExists = getDisplay(displayId) != null;
-            boolean isTaskbarEnabled = false;// dp != null && resource.isTaskbarEnabled();
+            boolean isTaskbarEnabled = dp != null && resource.isTaskbarEnabled();
             resource.debugMsg("recreateTaskbarForDisplay: isTaskbarEnabled=" + isTaskbarEnabled
                     + " [dp != null]=" + (dp != null)
                     + " mUserUnlocked=" + mUserUnlocked
@@ -766,10 +812,10 @@ public class TaskbarManagerImpl {
                 if (displayId == mPrimaryDisplayId) {
                     mSystemUiProxy.setHasBubbleBar(false);
                 }
-                if (!isTaskbarEnabled || !isLargeScreenTaskbar || !displayExists) {
+                if (!isTaskbarEnabled || !displayExists) {
                     resource.debugMsg(
                             "recreateTaskbarForDisplay: exiting bc (!isTaskbarEnabled || "
-                                    + "!isLargeScreenTaskbar || !displayExists)");
+                                    + "!displayExists)");
                     return;
                 }
             }
@@ -810,6 +856,7 @@ public class TaskbarManagerImpl {
             taskbarRootLayout.addView(taskbar.getDragLayer());
             taskbarRootLayout.setVisibility(getTaskbarVisibility(taskbar.isUserSetupComplete()));
             taskbar.notifyUpdateLayoutParams();
+            applyTaskbarPlugin(taskbar, resource, taskbarRootLayout);
         } finally {
             Trace.endSection();
             if (taskbar != null) {
