@@ -64,6 +64,9 @@ import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.LauncherActivityInfo;
+import android.content.pm.LauncherApps;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.PointF;
@@ -72,6 +75,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.os.Process;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.SparseArray;
@@ -92,6 +96,7 @@ import androidx.annotation.VisibleForTesting;
 import androidx.core.view.ViewCompat;
 
 import com.android.app.animation.Interpolators;
+import com.android.launcher3.LauncherAppState;
 import com.android.launcher3.accessibility.AccessibleDragListenerAdapter;
 import com.android.launcher3.accessibility.WorkspaceAccessibilityHelper;
 import com.android.launcher3.anim.PendingAnimation;
@@ -126,6 +131,7 @@ import com.android.launcher3.logger.LauncherAtom;
 import com.android.launcher3.logging.InstanceId;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.logging.StatsLogManager.LauncherEvent;
+import com.android.launcher3.model.data.AppInfo;
 import com.android.launcher3.model.data.AppPairInfo;
 import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.ItemInfo;
@@ -176,6 +182,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import android.graphics.Color;
+import android.provider.Settings;
+
 /**
  * The workspace is a wide area with a wallpaper and a finite number of pages.
  * Each page contains a number of icons, folders or widgets the user can
@@ -207,6 +216,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private static final int ADJACENT_SCREEN_DROP_DURATION = 300;
 
     public static final int DEFAULT_PAGE = 0;
+
+    private static final int DOCK_HEIGHT = 68;
 
     private final int mAllAppsIconSize;
 
@@ -446,8 +457,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         mWorkspaceFadeInAdjacentScreens = grid.shouldFadeAdjacentWorkspaceScreens();
 
         Rect padding = grid.getWorkspaceProfile().getWorkspacePadding();
-        setPadding(padding.left, padding.top, padding.right, padding.bottom);
-        mInsets.set(insets);
+        // setPadding(padding.left, padding.top, padding.right, padding.bottom);
+        // mInsets.set(insets);
 
         if (mWorkspaceFadeInAdjacentScreens) {
             // In landscape mode the page spacing is set to the default.
@@ -460,7 +471,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             int maxPadding = Math.max(
                     grid.getWorkspaceProfile().getEdgeMarginPx(), padding.left + 1
             );
-            setPageSpacing(Math.max(maxInsets, maxPadding));
+            // setPageSpacing(Math.max(maxInsets, maxPadding));
         }
 
         updateCellLayoutMeasures();
@@ -481,9 +492,15 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private void updateCellLayoutMeasures() {
         Rect padding = mLauncher.getDeviceProfile().getWorkspaceProfile().getCellLayoutPaddingPx();
         mWorkspaceScreens.forEach(cellLayout -> {
-            cellLayout.setPadding(padding.left, padding.top, padding.right, padding.bottom);
+            // cellLayout.setPadding(padding.left, padding.top, padding.right, padding.bottom);
+            float newVal = Settings.System.getFloat(getContext().getContentResolver(), "dock_scale",1.0f) * DOCK_HEIGHT;
+            cellLayout.setPadding(padding.left, 30, padding.right, dpToPx(Math.round(newVal))  );
             cellLayout.setSpaceBetweenCellLayoutsPx(getPageSpacing() / 4);
         });
+    }
+
+    int dpToPx(int dp) {
+        return (int) (dp * getContext().getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void updateWorkspaceWidgetsSizes() {
@@ -579,7 +596,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         // action for move/add to homescreen.
         // When a accessible drag is started by the folder, we only allow rearranging withing the
         // folder.
-        boolean addNewPage = !(options.isAccessibleDrag && dragObject.dragSource != this);
+        boolean addNewPage = false;//!(options.isAccessibleDrag && dragObject.dragSource != this);
         if (addNewPage) {
             mDeferRemoveExtraEmptyScreen = false;
             addExtraEmptyScreenOnDrag(dragObject);
@@ -2029,11 +2046,13 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (!payload.isAcceptable()) {
                     return false;
                 }
-                // NOTE: Workspace currently only supports dropping URIs.
-                if (!(payload instanceof SystemDragItemInfo.UriListPayload uriListPayload)
-                        || !HomeScreenFilesProvider.INSTANCE
-                                .get(mLauncher)
-                                .canMoveToHomeScreen(uriListPayload.getUriList())) {
+                // App launch payloads are converted to a workspace item on drop; URIs are only
+                // accepted when the home screen files feature can move them to the home screen.
+                if (!(payload instanceof SystemDragItemInfo.AppLaunchPayload)
+                        && (!(payload instanceof SystemDragItemInfo.UriListPayload uriListPayload)
+                                || !HomeScreenFilesProvider.INSTANCE
+                                        .get(mLauncher)
+                                        .canMoveToHomeScreen(uriListPayload.getUriList()))) {
                     return false;
                 }
             }
@@ -3103,6 +3122,35 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     }
 
     /**
+     * Builds a {@link WorkspaceItemInfo} for the given package name by resolving the app's launch
+     * activity, icon and label via the package manager and launcher icon cache.
+     */
+    @Nullable
+    private WorkspaceItemInfo buildWorkspaceItemInfoFromPackage(@Nullable String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return null;
+        }
+        final Context context = getContext();
+        final PackageManager pm = context.getPackageManager();
+        final Intent launchIntent = pm.getLaunchIntentForPackage(packageName);
+        if (launchIntent == null) {
+            return null;
+        }
+        final LauncherApps launcherApps = context.getSystemService(LauncherApps.class);
+        final LauncherActivityInfo lai = launcherApps.resolveActivity(launchIntent,
+                Process.myUserHandle());
+        if (lai == null) {
+            return null;
+        }
+        // NOTE: Do not use IconCache#getTitleAndIcon here; it asserts on a worker thread while the
+        // drop is handled on the main thread. The title is resolved directly and the icon is loaded
+        // asynchronously when the item is bound to the workspace.
+        final AppInfo appInfo = new AppInfo(context, lai, Process.myUserHandle());
+        appInfo.title = lai.getLabel();
+        return appInfo.makeWorkspaceItem(context);
+    }
+
+    /**
      * Drop an item that didn't originate on one of the workspace screens.
      * It may have come from Launcher (e.g. from all apps or customize), or it may have
      * come from another app altogether.
@@ -3137,6 +3185,14 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     requireNonNull(payload.getUriList()).get(0));
 
             d.dragInfo = info;
+        } else if (d.dragInfo instanceof SystemDragItemInfo dragInfo
+                && dragInfo.getPayload() instanceof SystemDragItemInfo.AppLaunchPayload payload) {
+            final WorkspaceItemInfo info = buildWorkspaceItemInfoFromPackage(
+                    payload.getPackageName());
+            if (info != null) {
+                info.container = container;
+                d.dragInfo = info;
+            }
         }
 
         ItemInfo info = d.dragInfo;

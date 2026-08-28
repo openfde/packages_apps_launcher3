@@ -95,7 +95,7 @@ public class PortraitStatesTouchController extends AbstractStateChangeTouchContr
         if (fromState == ALL_APPS && !isDragTowardPositive) {
             return NORMAL;
         } else if (fromState == NORMAL && shouldOpenAllApps(isDragTowardPositive)) {
-            return ALL_APPS;
+            return NORMAL;
         }
         return fromState;
     }

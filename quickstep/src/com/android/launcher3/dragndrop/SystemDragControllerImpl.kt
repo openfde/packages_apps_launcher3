@@ -70,6 +70,10 @@ constructor(
     }
 
     private fun acceptDrag(event: DragEvent): Boolean {
+        // Accept app-launch drags from the SystemUI app list.
+        if (event.clipDescription?.hasMimeType(SystemDragController.MIME_APP_LAUNCH) == true) {
+            return true
+        }
         // NOTE: We currently only support files dragged from other apps. If the home
         // screen files feature is disabled, we won't be able to handle the drag payload
         // so we can safely ignore the event.

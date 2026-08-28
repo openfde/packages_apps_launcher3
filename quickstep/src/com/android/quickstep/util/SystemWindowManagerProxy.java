@@ -53,6 +53,11 @@ public class SystemWindowManagerProxy extends WindowManagerProxy {
         mDesktopState = desktopState;
     }
 
+    // @Override
+    // public boolean isTaskbarDrawnInProcess() {
+    //     return false;
+    // }
+
     @Override
     public Rect getCurrentBounds(Context displayInfoContext) {
         return displayInfoContext.getResources().getConfiguration().windowConfiguration

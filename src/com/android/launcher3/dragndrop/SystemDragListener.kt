@@ -114,19 +114,28 @@ constructor(
                 try {
                     (params?.dragInfo as? SystemDragItemInfo)?.apply {
                         payload =
-                            SystemDragItemInfo.UriListPayload(
-                                permissions = mContext.requestDragAndDropPermissions(event),
-                                uriList =
-                                    clipData?.let { clipData ->
-                                        (0 until clipData.itemCount)
-                                            .mapNotNull(clipData::getItemAt)
-                                            .mapNotNull(ClipData.Item::getUri)
-                                            .distinct()
-                                    },
-                            )
+                            if (
+                                clipDescription?.hasMimeType(SystemDragController.MIME_APP_LAUNCH) ==
+                                    true
+                            ) {
+                                SystemDragItemInfo.AppLaunchPayload(
+                                    packageName = clipData?.getItemAt(0)?.intent?.getPackage()
+                                )
+                            } else {
+                                SystemDragItemInfo.UriListPayload(
+                                    permissions = mContext.requestDragAndDropPermissions(event),
+                                    uriList =
+                                        clipData?.let { clipData ->
+                                            (0 until clipData.itemCount)
+                                                .mapNotNull(clipData::getItemAt)
+                                                .mapNotNull(ClipData.Item::getUri)
+                                                .distinct()
+                                        },
+                                )
+                            }
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Unable to obtain URI permissions", e)
+                    Log.e(TAG, "Unable to obtain drag payload", e)
                 }
             }
             // NOTE: The system-provided drag image will be hidden so make the launcher-provided

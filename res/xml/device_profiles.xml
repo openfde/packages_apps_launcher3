@@ -188,7 +188,7 @@
             launcher:iconTextSize="14"
             launcher:borderSpaceHorizontal="16"
             launcher:borderSpaceVertical="64"
-            launcher:borderSpaceLandscapeHorizontal="64"
+            launcher:borderSpaceLandscapeHorizontal="16"
             launcher:borderSpaceLandscapeVertical="16"
             launcher:horizontalMargin="54"
             launcher:horizontalMarginLandscape="120"

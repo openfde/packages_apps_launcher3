@@ -40,6 +40,10 @@ sealed class SystemDragController : SystemDragHandler {
         // degrade gracefully if extras matching this prefix are provided from another app.
         @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
         const val DOCS_UI_EXTRA_PREFIX = "clipper:"
+
+        // MIME type used by SystemUI to drag an app icon to the home screen. The ClipData payload
+        // carries a single Intent whose package is set to the dragged app's package name.
+        const val MIME_APP_LAUNCH = "com.boringdroid.systemui/app-launch"
     }
 }
 

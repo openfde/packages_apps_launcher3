@@ -21,7 +21,9 @@ import static android.view.Display.DEFAULT_DISPLAY;
 import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_OPTIMIZE_MEASURE;
 import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED;
 
+import static com.android.app.animation.Interpolators.ACCELERATE_2;
 import static com.android.app.animation.Interpolators.EMPHASIZED;
+import static com.android.app.animation.Interpolators.ZOOM_OUT;
 import static com.android.internal.jank.Cuj.CUJ_LAUNCHER_LAUNCH_APP_PAIR_FROM_WORKSPACE;
 import static com.android.launcher3.Flags.blurOnMoreSurfaces;
 import static com.android.launcher3.Flags.enableUnfoldStateAnimation;
@@ -35,6 +37,8 @@ import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_DESKTOP
 import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_HOTSEAT;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT;
+import static com.android.launcher3.LauncherAnimUtils.SCALE_INDEX_WORKSPACE_STATE;
+import static com.android.launcher3.LauncherAnimUtils.WORKSPACE_SCALE_PROPERTY_FACTORY;
 import static com.android.launcher3.LauncherState.ALL_APPS;
 import static com.android.launcher3.LauncherState.FLAG_SKIP_STATE_ANNOUNCEMENT;
 import static com.android.launcher3.LauncherState.HOTSEAT_ICONS;
@@ -80,9 +84,12 @@ import static com.android.wm.shell.shared.split.SplitScreenConstants.SNAP_TO_2_5
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.app.ActivityOptions;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.ShortcutInfo;
 import android.content.res.Configuration;
@@ -303,6 +310,16 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
 
     private boolean mIsOverlayVisible;
 
+    private static final String ACTION_OVERLAY_VISIBLE =
+            "com.android.launcher3.action.APP_OVERLAY_VISIBLE";
+    private static final String EXTRA_OVERLAY_VISIBLE = "visible";
+
+    private static final float OVERLAY_WORKSPACE_SCALE = 0.7f;
+    private static final int OVERLAY_ANIM_DURATION_MS = 350;
+
+    private BroadcastReceiver mOverlayVisibilityReceiver;
+    private Animator mOverlayWorkspaceScaleAnimator;
+
     private final OverviewChangeListener mOverviewChangeListener = this::onOverviewTargetChanged;
 
     private BubbleFeatureConfig mBubbleFeatureConfig;
@@ -358,6 +375,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
                 mSplitSelectStateController);
         mActionsView.updateDimension(getDeviceProfile(), overviewPanel.getLastComputedTaskSize());
         mActionsView.updateVerticalMargin(DisplayController.getNavigationMode(this));
+        mActionsView.setVisibility(View.GONE);
 
         mAppTransitionManager = buildAppTransitionManager();
         mAppTransitionManager.registerRemoteAnimations();
@@ -613,6 +631,27 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         mIsOverlayVisible = visible;
     }
 
+    /**
+     * Animates the workspace scale when the SystemUI app list / global search overlay becomes
+     * visible or invisible, mirroring the launcher's all-apps transition.
+     */
+    private void animateWorkspaceForOverlay(boolean visible) {
+        Workspace<?> workspace = getWorkspace();
+        if (workspace == null) {
+            return;
+        }
+        if (mOverlayWorkspaceScaleAnimator != null) {
+            mOverlayWorkspaceScaleAnimator.cancel();
+        }
+        float targetScale = visible ? OVERLAY_WORKSPACE_SCALE : 1f;
+        int duration = OVERLAY_ANIM_DURATION_MS;
+        mOverlayWorkspaceScaleAnimator = ObjectAnimator.ofFloat(workspace,
+                WORKSPACE_SCALE_PROPERTY_FACTORY.get(SCALE_INDEX_WORKSPACE_STATE), targetScale);
+        mOverlayWorkspaceScaleAnimator.setDuration(duration);
+        mOverlayWorkspaceScaleAnimator.setInterpolator(visible ? ZOOM_OUT : ACCELERATE_2);
+        mOverlayWorkspaceScaleAnimator.start();
+    }
+
     @Override
     public void bindPredictedContainerInfo(PredictedContainerInfo info) {
         super.bindPredictedContainerInfo(info);
@@ -636,6 +675,11 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
 
     @Override
     public void onDestroy() {
+        if (mOverlayVisibilityReceiver != null) {
+            unregisterReceiver(mOverlayVisibilityReceiver);
+            mOverlayVisibilityReceiver = null;
+        }
+
         if (mAppTransitionManager != null) {
             mAppTransitionManager.onActivityDestroyed();
         }
@@ -790,6 +834,16 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         OverviewComponentObserver.INSTANCE.get(this)
                 .addOverviewChangeListener(mOverviewChangeListener);
         new TraceStateLoggerHelper(this).startTraceStateLogger();
+
+        mOverlayVisibilityReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean visible = intent.getBooleanExtra(EXTRA_OVERLAY_VISIBLE, false);
+                animateWorkspaceForOverlay(visible);
+            }
+        };
+        registerReceiver(mOverlayVisibilityReceiver, new IntentFilter(ACTION_OVERLAY_VISIBLE),
+                Context.RECEIVER_EXPORTED);
     }
 
     @Override

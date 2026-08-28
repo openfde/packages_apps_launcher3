@@ -21,7 +21,6 @@ import static android.view.MotionEvent.ACTION_DOWN;
 import static android.view.MotionEvent.ACTION_OUTSIDE;
 import static android.view.MotionEvent.ACTION_UP;
 
-import static com.android.launcher3.Flags.enableSystemDrag;
 import static com.android.launcher3.util.window.RefreshRateTracker.getSingleFrameMs;
 
 import android.content.Context;
@@ -130,13 +129,11 @@ public abstract class BaseDragLayer<T extends Context & ActivityContext>
         mContainer = ActivityContext.lookupContext(context);
         mMultiValueAlpha = new MultiValueAlpha(this, alphaChannelCount);
 
-        if (enableSystemDrag()) {
-            // Delegate handling of system drag events to the drag controller.
-            super.setOnDragListener((view, event) -> {
-                final DragController dragController = mContainer.getDragController();
-                return dragController != null && dragController.onDragEvent(event);
-            });
-        }
+        // Delegate handling of system drag events to the drag controller.
+        super.setOnDragListener((view, event) -> {
+            final DragController dragController = mContainer.getDragController();
+            return dragController != null && dragController.onDragEvent(event);
+        });
     }
 
     /**
@@ -606,10 +603,6 @@ public abstract class BaseDragLayer<T extends Context & ActivityContext>
 
     @Override
     public void setOnDragListener(@Nullable OnDragListener listener) {
-        if (enableSystemDrag()) {
-            Log.e(TAG, "Use `DragController#addSystemDragHandler()` instead.");
-            return;
-        }
-        super.setOnDragListener(listener);
+        Log.e(TAG, "Use `DragController#addSystemDragHandler()` instead.");
     }
 }

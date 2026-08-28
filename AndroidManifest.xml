@@ -29,6 +29,7 @@
     <!-- Permission required to start a WidgetPickerActivity. -->
     <permission android:name="${applicationId}.permission.START_WIDGET_PICKER_ACTIVITY"
         android:protectionLevel="signature|privileged" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>    
 
     <application
         android:backupAgent="com.android.launcher3.LauncherBackupAgent"
@@ -40,6 +41,7 @@
         android:label="@string/derived_app_name"
         android:theme="@style/AppTheme"
         android:largeHeap="@bool/config_largeHeap"
+        android:usesCleartextTraffic="true"
         android:restoreAnyVersion="true"
         android:supportsRtl="true" >
 

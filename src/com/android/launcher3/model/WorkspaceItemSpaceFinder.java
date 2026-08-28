@@ -187,6 +187,6 @@ public class WorkspaceItemSpaceFinder {
             }
         }
 
-        return occupied.findVacantCell(cellXY, spanX, spanY);
+        return occupied.findVacantCellVertical(cellXY, spanX, spanY);
     }
 }
