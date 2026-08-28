@@ -37,6 +37,9 @@ import com.android.launcher3.views.IconButtonView
 import com.android.quickstep.DeviceConfigWrapper
 import com.android.quickstep.util.ContextualSearchStateManager
 import com.android.wm.shell.Flags
+import android.view.Gravity
+import android.view.ViewGroup;
+
 
 /** Taskbar all apps button container for customizable taskbar. */
 class TaskbarAllAppsButtonContainer
@@ -75,10 +78,18 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
             )
         backgroundTintList = ColorStateList.valueOf(TRANSPARENT)
         setPadding(taskbarIconViewPadding)
+        gravity = Gravity.CENTER
         setIconDrawable(drawable)
         width = spaceNeeded
         height = spaceNeeded
-        setForegroundTint(activityContext.getColor(R.color.all_apps_button_color))
+
+        val lp = layoutParams
+        if (lp is ViewGroup.MarginLayoutParams) {
+            lp.topMargin = dpToPx(2f, activityContext)
+            lp.rightMargin = dpToPx(6f, activityContext)
+            layoutParams = lp
+        }
+        // setForegroundTint(activityContext.getColor(R.color.all_apps_button_color))
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -117,9 +128,9 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     @DrawableRes
     private fun getAllAppsButtonForExpressiveTheme(): Int {
         return if (isTaskbarInMinimalState) {
-            R.drawable.ic_taskbar_minimal_state_all_apps_search_button_expressive_theme
+            R.drawable.icon_menu
         } else {
-            R.drawable.ic_taskbar_all_apps_search_button_expressive_theme
+            R.drawable.icon_menu
         }
     }
 

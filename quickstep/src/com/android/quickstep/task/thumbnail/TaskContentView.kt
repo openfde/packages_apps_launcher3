@@ -154,11 +154,14 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
         }
 
         setOnLongClickListener { view ->
+            view.parent?.requestDisallowInterceptTouchEvent(true)
             val item = ClipData.Item("Drag")
             val mimeTypes = arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN)
             val clipData = ClipData("DragData", mimeTypes, item)
+            prepareViewForDragShadow()
             val shadowBuilder = View.DragShadowBuilder(this)
             this.startDragAndDrop(clipData, shadowBuilder, null, 0)
+            restoreViewAfterDragShadow()
             true
         }
 
@@ -338,6 +341,26 @@ class TaskContentView @JvmOverloads constructor(context: Context, attrs: Attribu
                 findViewById<ViewStub>(R.id.task_header_view)
                     .apply { layoutResource = R.layout.task_header_view }
                     .inflate() as TaskHeaderView
+        }
+    }
+
+    private fun prepareViewForDragShadow() {
+        val thumbnailView = taskThumbnailView ?: return
+        val liveTileView = thumbnailView.findViewById<View>(R.id.task_thumbnail_live_tile)
+        val snapshotView = thumbnailView.findViewById<View>(R.id.task_thumbnail)
+        if (liveTileView.visibility == VISIBLE) {
+            liveTileView.visibility = INVISIBLE
+            snapshotView.visibility = VISIBLE
+        }
+    }
+
+    private fun restoreViewAfterDragShadow() {
+        val thumbnailView = taskThumbnailView ?: return
+        val liveTileView = thumbnailView.findViewById<View>(R.id.task_thumbnail_live_tile)
+        val snapshotView = thumbnailView.findViewById<View>(R.id.task_thumbnail)
+        if (snapshotView.visibility == VISIBLE && liveTileView.visibility == INVISIBLE) {
+            snapshotView.visibility = INVISIBLE
+            liveTileView.visibility = VISIBLE
         }
     }
 

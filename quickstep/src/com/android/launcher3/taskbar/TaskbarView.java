@@ -48,6 +48,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+
 
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
@@ -109,7 +111,7 @@ import java.util.Set;
 /**
  * Hosts the Taskbar content such as Hotseat and Recent Apps. Drawn on top of other apps.
  */
-public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconParent, Insettable,
+public class TaskbarView extends LinearLayout implements FolderIcon.FolderIconParent, Insettable,
         DeviceProfile.OnDeviceProfileChangeListener,
         TaskbarViewDragDropController.PinnedAppsContainerDelegate {
     // The number of icons always present in the taskbar, including the All Apps button and the
@@ -234,6 +236,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
 
         // TODO: Disable touch events on QSB otherwise it can crash.
         mQsb = LauncherComponentProvider.get(context).getQsbWidgetFactory().createView(this);
+        mQsb.setVisibility(View.GONE);
         onDeviceProfileChanged(mActivityContext.getDeviceProfile());
 
         final TaskbarSpecsEvaluator specsEvaluator = mActivityContext.getTaskbarSpecsEvaluator();
@@ -367,7 +370,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
 
         if (mActivityContext.getDeviceProfile().getHotseatProfile().isQsbInline()) {
             addView(mQsb, mIsRtl ? numStaticViews : 0);
-            mQsb.setVisibility(View.INVISIBLE);
+            mQsb.setVisibility(View.GONE);
             numStaticViews++;
         }
         return numStaticViews;
@@ -1434,144 +1437,144 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
         return getTaskBarIconsEndForBubbleBarLocation(location) - iconsBounds.right;
     }
 
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        int spaceNeeded = getIconLayoutWidth();
-        boolean layoutRtl = isLayoutRtl();
-        DeviceProfile deviceProfile = mActivityContext.getDeviceProfile();
-        int navSpaceNeeded = deviceProfile.getHotseatProfile().getBarEndOffset();
-        int centerAlignIconEnd = (right + left + spaceNeeded) / 2;
-        int iconEnd = centerAlignIconEnd;
-        if (mShouldTryStartAlign) {
-            int startSpacingPx =
-                    deviceProfile.getHotseatProfile().getInlineNavButtonsEndSpacingPx();
-            if (mControllerCallbacks.isBubbleBarEnabled()
-                    && mBubbleBarLocation != null
-                    && mActivityContext.shouldStartAlignTaskbar()) {
-                iconEnd = (int) getTaskBarIconsEndForBubbleBarLocation(mBubbleBarLocation);
-            } else {
-                if (layoutRtl) {
-                    iconEnd = right - startSpacingPx;
-                } else {
-                    iconEnd = startSpacingPx + spaceNeeded;
-                }
-                boolean needMoreSpaceForNav = layoutRtl
-                        ? navSpaceNeeded > (iconEnd - spaceNeeded)
-                        : iconEnd > (right - navSpaceNeeded);
-                if (needMoreSpaceForNav) {
-                    // Add offset to account for nav bar when taskbar is centered
-                    int offset = layoutRtl
-                            ? navSpaceNeeded - (centerAlignIconEnd - spaceNeeded)
-                            : (right - navSpaceNeeded) - centerAlignIconEnd;
-                    iconEnd = centerAlignIconEnd + offset;
-                }
-            }
-        }
+    // @Override
+    // protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+    //     int spaceNeeded = getIconLayoutWidth();
+    //     boolean layoutRtl = isLayoutRtl();
+    //     DeviceProfile deviceProfile = mActivityContext.getDeviceProfile();
+    //     int navSpaceNeeded = deviceProfile.getHotseatProfile().getBarEndOffset();
+    //     int centerAlignIconEnd = (right + left + spaceNeeded) / 2;
+    //     int iconEnd = centerAlignIconEnd;
+    //     if (mShouldTryStartAlign) {
+    //         int startSpacingPx =
+    //                 deviceProfile.getHotseatProfile().getInlineNavButtonsEndSpacingPx();
+    //         if (mControllerCallbacks.isBubbleBarEnabled()
+    //                 && mBubbleBarLocation != null
+    //                 && mActivityContext.shouldStartAlignTaskbar()) {
+    //             iconEnd = (int) getTaskBarIconsEndForBubbleBarLocation(mBubbleBarLocation);
+    //         } else {
+    //             if (layoutRtl) {
+    //                 iconEnd = right - startSpacingPx;
+    //             } else {
+    //                 iconEnd = startSpacingPx + spaceNeeded;
+    //             }
+    //             boolean needMoreSpaceForNav = layoutRtl
+    //                     ? navSpaceNeeded > (iconEnd - spaceNeeded)
+    //                     : iconEnd > (right - navSpaceNeeded);
+    //             if (needMoreSpaceForNav) {
+    //                 // Add offset to account for nav bar when taskbar is centered
+    //                 int offset = layoutRtl
+    //                         ? navSpaceNeeded - (centerAlignIconEnd - spaceNeeded)
+    //                         : (right - navSpaceNeeded) - centerAlignIconEnd;
+    //                 iconEnd = centerAlignIconEnd + offset;
+    //             }
+    //         }
+    //     }
 
-        // Currently, we support only one device with display cutout and we only are concern about
-        // it when the bottom rect is present and non empty
-        DisplayCutout displayCutout = getDisplay().getCutout();
-        if (displayCutout != null && !displayCutout.getBoundingRectBottom().isEmpty()) {
-            Rect cutoutBottomRect = displayCutout.getBoundingRectBottom();
-            // when cutout present at the bottom of screen align taskbar icons to cutout offset
-            // if taskbar icon overlaps with cutout
-            int taskbarIconLeftBound = iconEnd - spaceNeeded;
-            int taskbarIconRightBound = iconEnd;
+    //     // Currently, we support only one device with display cutout and we only are concern about
+    //     // it when the bottom rect is present and non empty
+    //     DisplayCutout displayCutout = getDisplay().getCutout();
+    //     if (displayCutout != null && !displayCutout.getBoundingRectBottom().isEmpty()) {
+    //         Rect cutoutBottomRect = displayCutout.getBoundingRectBottom();
+    //         // when cutout present at the bottom of screen align taskbar icons to cutout offset
+    //         // if taskbar icon overlaps with cutout
+    //         int taskbarIconLeftBound = iconEnd - spaceNeeded;
+    //         int taskbarIconRightBound = iconEnd;
 
-            boolean doesTaskbarIconsOverlapWithCutout =
-                    taskbarIconLeftBound <= cutoutBottomRect.centerX()
-                            && cutoutBottomRect.centerX() <= taskbarIconRightBound;
+    //         boolean doesTaskbarIconsOverlapWithCutout =
+    //                 taskbarIconLeftBound <= cutoutBottomRect.centerX()
+    //                         && cutoutBottomRect.centerX() <= taskbarIconRightBound;
 
-            if (doesTaskbarIconsOverlapWithCutout) {
-                if (!layoutRtl) {
-                    iconEnd = spaceNeeded + cutoutBottomRect.width();
-                } else {
-                    iconEnd = right - cutoutBottomRect.width();
-                }
-            }
-        }
+    //         if (doesTaskbarIconsOverlapWithCutout) {
+    //             if (!layoutRtl) {
+    //                 iconEnd = spaceNeeded + cutoutBottomRect.width();
+    //             } else {
+    //                 iconEnd = right - cutoutBottomRect.width();
+    //             }
+    //         }
+    //     }
 
-        sTmpRect.set(mIconLayoutBounds);
+    //     sTmpRect.set(mIconLayoutBounds);
 
-        // Layout the children
-        mIconLayoutBounds.right = iconEnd;
-        mIconLayoutBounds.top = (bottom - top - mIconTouchSize) / 2;
-        mIconLayoutBounds.bottom = mIconLayoutBounds.top + mIconTouchSize;
+    //     // Layout the children
+    //     mIconLayoutBounds.right = iconEnd;
+    //     mIconLayoutBounds.top = (bottom - top - mIconTouchSize) / 2;
+    //     mIconLayoutBounds.bottom = mIconLayoutBounds.top + mIconTouchSize;
 
-        // With rtl layout, the all apps button will be translated by `allAppsButtonOffset` after
-        // layout completion (by `TaskbarViewController`). Offset the icon end by the same amount
-        // when laying out icons, so the taskbar content remains centered after all apps button
-        // translation.
-        if (layoutRtl) {
-            iconEnd += mAllAppsButtonTranslationOffset;
-        }
+    //     // With rtl layout, the all apps button will be translated by `allAppsButtonOffset` after
+    //     // layout completion (by `TaskbarViewController`). Offset the icon end by the same amount
+    //     // when laying out icons, so the taskbar content remains centered after all apps button
+    //     // translation.
+    //     if (layoutRtl) {
+    //         iconEnd += mAllAppsButtonTranslationOffset;
+    //     }
 
-        mControllerCallbacks.onPreLayoutChildren();
+    //     mControllerCallbacks.onPreLayoutChildren();
 
-        int count = getChildCount();
-        for (int i = count; i > 0; i--) {
-            View child = getChildAt(i - 1);
-            if (child.getVisibility() == View.GONE) {
-                continue;
-            }
-            if (child == mQsb) {
-                int qsbStart;
-                int qsbEnd;
-                if (layoutRtl) {
-                    qsbStart = iconEnd + mItemMarginLeftRight;
-                    qsbEnd = qsbStart + deviceProfile.getHotseatProfile().getQsbWidth();
-                } else {
-                    qsbEnd = iconEnd - mItemMarginLeftRight;
-                    qsbStart = qsbEnd - deviceProfile.getHotseatProfile().getQsbWidth();
-                }
-                int qsbTop = (bottom - top - deviceProfile.getHotseatProfile().getQsbHeight()) / 2;
-                int qsbBottom = qsbTop + deviceProfile.getHotseatProfile().getQsbHeight();
-                child.layout(qsbStart, qsbTop, qsbEnd, qsbBottom);
-            } else if (child == mAllAppsButtonContainer) {
-                iconEnd -= mItemMarginLeftRight;
-                int iconStart = iconEnd - mAllAppsButtonContainer.getSpaceNeeded();
-                child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
-                iconEnd = iconStart - mItemMarginLeftRight;
-            } else if (child == mTaskbarDividerContainer) {
-                iconEnd += mItemMarginLeftRight;
-                int iconStart = iconEnd - mTaskbarDividerContainer.getSpaceNeeded();
-                child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
-                iconEnd = iconStart + mItemMarginLeftRight;
-            } else if (child instanceof TaskbarPinnedAppIconContainer tic) {
-                iconEnd -= mItemMarginLeftRight;
-                int iconStart = iconEnd - tic.getSpaceNeeded();
-                child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
-                iconEnd = iconStart - mItemMarginLeftRight;
-            } else {
-                iconEnd -= mItemMarginLeftRight;
-                int iconStart = iconEnd - mIconTouchSize;
-                child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
-                iconEnd = iconStart - mItemMarginLeftRight;
-            }
-        }
+    //     int count = getChildCount();
+    //     for (int i = count; i > 0; i--) {
+    //         View child = getChildAt(i - 1);
+    //         if (child.getVisibility() == View.GONE) {
+    //             continue;
+    //         }
+    //         if (child == mQsb) {
+    //             int qsbStart;
+    //             int qsbEnd;
+    //             if (layoutRtl) {
+    //                 qsbStart = iconEnd + mItemMarginLeftRight;
+    //                 qsbEnd = qsbStart + deviceProfile.getHotseatProfile().getQsbWidth();
+    //             } else {
+    //                 qsbEnd = iconEnd - mItemMarginLeftRight;
+    //                 qsbStart = qsbEnd - deviceProfile.getHotseatProfile().getQsbWidth();
+    //             }
+    //             int qsbTop = (bottom - top - deviceProfile.getHotseatProfile().getQsbHeight()) / 2;
+    //             int qsbBottom = qsbTop + deviceProfile.getHotseatProfile().getQsbHeight();
+    //             child.layout(qsbStart, qsbTop, qsbEnd, qsbBottom);
+    //         } else if (child == mAllAppsButtonContainer) {
+    //             iconEnd -= mItemMarginLeftRight;
+    //             int iconStart = iconEnd - mAllAppsButtonContainer.getSpaceNeeded();
+    //             child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
+    //             iconEnd = iconStart - mItemMarginLeftRight;
+    //         } else if (child == mTaskbarDividerContainer) {
+    //             iconEnd += mItemMarginLeftRight;
+    //             int iconStart = iconEnd - mTaskbarDividerContainer.getSpaceNeeded();
+    //             child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
+    //             iconEnd = iconStart + mItemMarginLeftRight;
+    //         } else if (child instanceof TaskbarPinnedAppIconContainer tic) {
+    //             iconEnd -= mItemMarginLeftRight;
+    //             int iconStart = iconEnd - tic.getSpaceNeeded();
+    //             child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
+    //             iconEnd = iconStart - mItemMarginLeftRight;
+    //         } else {
+    //             iconEnd -= mItemMarginLeftRight;
+    //             int iconStart = iconEnd - mIconTouchSize;
+    //             child.layout(iconStart, mIconLayoutBounds.top, iconEnd, mIconLayoutBounds.bottom);
+    //             iconEnd = iconStart - mItemMarginLeftRight;
+    //         }
+    //     }
 
-        mIconLayoutBounds.left = iconEnd;
+    //     mIconLayoutBounds.left = iconEnd;
 
-        // Adjust the icon layout bounds by the amount by which all apps button will be translated
-        // post layout to maintain margin between all apps button and the edge of the transient
-        // taskbar background. Done for ltr layout only - for rtl layout, the offset needs to be
-        // adjusted on the right, which is done by offsetting `iconEnd` after setting
-        // `mIconLayoutBounds.right`.
-        if (!layoutRtl) {
-            mIconLayoutBounds.left += mAllAppsButtonTranslationOffset;
-        }
+    //     // Adjust the icon layout bounds by the amount by which all apps button will be translated
+    //     // post layout to maintain margin between all apps button and the edge of the transient
+    //     // taskbar background. Done for ltr layout only - for rtl layout, the offset needs to be
+    //     // adjusted on the right, which is done by offsetting `iconEnd` after setting
+    //     // `mIconLayoutBounds.right`.
+    //     if (!layoutRtl) {
+    //         mIconLayoutBounds.left += mAllAppsButtonTranslationOffset;
+    //     }
 
-        if (mIconLayoutBounds.right - mIconLayoutBounds.left < mTransientTaskbarMinWidth) {
-            int center = mIconLayoutBounds.centerX();
-            int distanceFromCenter = (int) mTransientTaskbarMinWidth / 2;
-            mIconLayoutBounds.right = center + distanceFromCenter;
-            mIconLayoutBounds.left = center - distanceFromCenter;
-        }
+    //     if (mIconLayoutBounds.right - mIconLayoutBounds.left < mTransientTaskbarMinWidth) {
+    //         int center = mIconLayoutBounds.centerX();
+    //         int distanceFromCenter = (int) mTransientTaskbarMinWidth / 2;
+    //         mIconLayoutBounds.right = center + distanceFromCenter;
+    //         mIconLayoutBounds.left = center - distanceFromCenter;
+    //     }
 
-        if (!sTmpRect.equals(mIconLayoutBounds)) {
-            mControllerCallbacks.notifyIconLayoutBoundsChanged();
-        }
-    }
+    //     if (!sTmpRect.equals(mIconLayoutBounds)) {
+    //         mControllerCallbacks.notifyIconLayoutBoundsChanged();
+    //     }
+    // }
 
     /**
      * Returns whether the given MotionEvent, *in screen coordinates*, is within any Taskbar item's
@@ -1826,15 +1829,15 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (mLeaveBehindFolderIcon != null) {
-            canvas.save();
-            canvas.translate(
-                    mLeaveBehindFolderIcon.getLeft() + mLeaveBehindFolderIcon.getTranslationX(),
-                    mLeaveBehindFolderIcon.getTop());
-            PreviewBackground previewBackground = mLeaveBehindFolderIcon.getFolderBackground();
-            previewBackground.drawLeaveBehind(canvas, mFolderLeaveBehindColor);
-            canvas.restore();
-        }
+//        if (mLeaveBehindFolderIcon != null) {
+//            canvas.save();
+//            canvas.translate(
+//                    mLeaveBehindFolderIcon.getLeft() + mLeaveBehindFolderIcon.getTranslationX(),
+//                    mLeaveBehindFolderIcon.getTop());
+//            PreviewBackground previewBackground = mLeaveBehindFolderIcon.getFolderBackground();
+//            previewBackground.drawLeaveBehind(canvas, mFolderLeaveBehindColor);
+//            canvas.restore();
+//        }
     }
 
     @Override
@@ -1880,10 +1883,10 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
         }
     }
 
-    @Override
-    protected ViewGroup.LayoutParams generateLayoutParams(ViewGroup.LayoutParams lp) {
-        return new TaskbarLayoutParams(lp);
-    }
+    // @Override
+    // protected ViewGroup.LayoutParams generateLayoutParams(ViewGroup.LayoutParams lp) {
+    //     return new TaskbarLayoutParams(lp);
+    // }
 
     @Override
     public LayoutParams generateLayoutParams(AttributeSet attrs) {
@@ -2026,7 +2029,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
         return mDragDelegate.updateForDroppedItem(item);
     }
 
-    public static class TaskbarLayoutParams extends FrameLayout.LayoutParams {
+    public static class TaskbarLayoutParams extends LinearLayout.LayoutParams {
 
         @Nullable public CellInfo bindInfo;
 

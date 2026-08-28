@@ -1891,6 +1891,8 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        int keyCode = event.getKeyCode();
+        Log.d("KeyTest", "dispatchKeyEvent：" + keyCode);
         TestLogging.recordKeyEvent(TestProtocol.SEQUENCE_MAIN, "Key event", event);
         return (event.getKeyCode() == KeyEvent.KEYCODE_HOME) || tryHandleEscapeKey(event)
                     || super.dispatchKeyEvent(event);
@@ -2391,6 +2393,7 @@ public class Launcher extends StatefulActivity<LauncherState>
      */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d("KeyTest", "onKeyDown：" + keyCode);
         Boolean result = mKeyboardShortcutsDelegate.onKeyDown(keyCode, event);
         return result != null ? result : super.onKeyDown(keyCode, event);
     }
