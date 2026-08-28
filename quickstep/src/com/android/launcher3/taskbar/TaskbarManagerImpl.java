@@ -750,7 +750,7 @@ public class TaskbarManagerImpl {
             resource.destroyTaskbarForDisplay();
 
             boolean displayExists = getDisplay(displayId) != null;
-            boolean isTaskbarEnabled = dp != null && resource.isTaskbarEnabled();
+            boolean isTaskbarEnabled = false;// dp != null && resource.isTaskbarEnabled();
             resource.debugMsg("recreateTaskbarForDisplay: isTaskbarEnabled=" + isTaskbarEnabled
                     + " [dp != null]=" + (dp != null)
                     + " mUserUnlocked=" + mUserUnlocked
@@ -766,10 +766,10 @@ public class TaskbarManagerImpl {
                 if (displayId == mPrimaryDisplayId) {
                     mSystemUiProxy.setHasBubbleBar(false);
                 }
-                if (!isTaskbarEnabled || !displayExists) {
+                if (!isTaskbarEnabled || !isLargeScreenTaskbar || !displayExists) {
                     resource.debugMsg(
                             "recreateTaskbarForDisplay: exiting bc (!isTaskbarEnabled || "
-                                    + "!displayExists)");
+                                    + "!isLargeScreenTaskbar || !displayExists)");
                     return;
                 }
             }

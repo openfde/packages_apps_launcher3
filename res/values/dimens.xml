@@ -35,8 +35,8 @@
 
     <!-- Hotseat -->
     <dimen name="dynamic_grid_hotseat_bottom_tall_padding">0dp</dimen>
-    <dimen name="spring_loaded_hotseat_top_margin">76dp</dimen>
-    <dimen name="spring_loaded_hotseat_top_margin_wide_portrait">64dp</dimen>
+    <dimen name="spring_loaded_hotseat_top_margin">0dp</dimen>
+    <dimen name="spring_loaded_hotseat_top_margin_wide_portrait">0dp</dimen>
 
     <dimen name="dynamic_grid_hotseat_side_padding">0dp</dimen>
 
@@ -44,15 +44,15 @@
     <dimen name="min_qsb_margin">8dp</dimen>
 
     <!-- Workspace page indicator -->
-    <dimen name="workspace_page_indicator_height">24dp</dimen>
-    <dimen name="workspace_page_indicator_line_height">1dp</dimen>
+    <dimen name="workspace_page_indicator_height">0dp</dimen>
+    <dimen name="workspace_page_indicator_line_height">0dp</dimen>
     <dimen name="workspace_page_indicator_overlap_workspace">0dp</dimen>
 
     <!-- Drop target bar -->
-    <dimen name="dynamic_grid_drop_target_size">56dp</dimen>
+    <dimen name="dynamic_grid_drop_target_size">0dp</dimen>
     <dimen name="drop_target_vertical_gap">20dp</dimen>
-    <dimen name="drop_target_top_margin">32dp</dimen>
-    <dimen name="drop_target_bottom_margin">16dp</dimen>
+    <dimen name="drop_target_top_margin">0dp</dimen>
+    <dimen name="drop_target_bottom_margin">0dp</dimen>
     <dimen name="drop_target_bottom_margin_wide_portrait">32dp</dimen>
 
     <!-- App Widget resize frame -->
@@ -118,7 +118,7 @@
     <dimen name="all_apps_empty_search_message_top_offset">40dp</dimen>
     <dimen name="all_apps_search_top_row_extra_height">4dp</dimen>
     <dimen name="all_apps_header_pill_height">48dp</dimen>
-    <dimen name="all_apps_header_pill_corner_radius">12dp</dimen>
+    <dimen name="all_apps_header_pill_corner_radius">0dp</dimen>
     <dimen name="all_apps_header_tab_height">48dp</dimen>
     <dimen name="all_apps_tabs_indicator_height">2dp</dimen>
     <dimen name="all_apps_header_top_margin">33dp</dimen>
@@ -261,15 +261,15 @@
 
     <!-- Dragging -->
     <!-- Drag padding to add to the bottom of drop targets -->
-    <dimen name="drop_target_drag_padding">14dp</dimen>
+    <dimen name="drop_target_drag_padding">0dp</dimen>
     <dimen name="drop_target_text_size">16sp</dimen>
     <dimen name="drop_target_shadow_elevation">2dp</dimen>
     <dimen name="drop_target_bar_margin_horizontal">4dp</dimen>
     <dimen name="drop_target_button_drawable_size">20dp</dimen>
     <dimen name="drop_target_button_drawable_padding">8dp</dimen>
-    <dimen name="drop_target_button_drawable_horizontal_padding">16dp</dimen>
-    <dimen name="drop_target_button_drawable_vertical_padding">8dp</dimen>
-    <dimen name="drop_target_button_frame_radius">80dp</dimen>
+    <dimen name="drop_target_button_drawable_horizontal_padding">0dp</dimen>
+    <dimen name="drop_target_button_drawable_vertical_padding">0dp</dimen>
+    <dimen name="drop_target_button_frame_radius">0dp</dimen>
     <dimen name="drop_target_button_gap">28dp</dimen>
     <dimen name="drop_target_button_workspace_edge_gap">0dp</dimen>
 
@@ -327,13 +327,13 @@
     <!-- Minimum size of the widget dragged view to keep it visible under the finger. -->
     <dimen name="widget_drag_view_min_scale_down_size">70dp</dimen>
     <!-- an icon with shortcuts must be dragged this far before the container is removed. -->
-    <dimen name="deep_shortcuts_start_drag_threshold">16dp</dimen>
+    <dimen name="deep_shortcuts_start_drag_threshold">8dp</dimen>
     <!-- Possibly related to b/235886078, icon needs to be scaled up to match expected visual size of 32 dp -->
     <dimen name="deep_shortcut_icon_size">35dp</dimen>
     <dimen name="popup_blur_radius">20dp</dimen>
     <dimen name="popup_margin">2dp</dimen>
-    <dimen name="popup_single_item_radius">100dp</dimen>
-    <dimen name="popup_smaller_radius">4dp</dimen>
+    <dimen name="popup_single_item_radius">0dp</dimen>
+    <dimen name="popup_smaller_radius">0dp</dimen>
     <dimen name="deep_shortcut_drawable_padding">16dp</dimen>
     <dimen name="popup_padding_start">10dp</dimen>
     <dimen name="popup_padding_end">14dp</dimen>
@@ -345,7 +345,7 @@
     <dimen name="popup_arrow_horizontal_center_offset">26dp</dimen>
     <dimen name="popup_arrow_corner_radius">2dp</dimen>
     <!-- popup_padding_start + deep_shortcut_icon_size + 12dp -->
-    <dimen name="deep_shortcuts_text_padding_start">54dp</dimen>
+    <dimen name="deep_shortcuts_text_padding_start">48dp</dimen>
     <dimen name="system_shortcut_icon_size">20dp</dimen>
     <!-- popup_arrow_horizontal_center_offset - system_shortcut_icon_size / 2 -->
     <dimen name="system_shortcut_margin_start">16dp</dimen>
@@ -360,7 +360,7 @@
 
 
     <!-- Notifications -->
-    <dimen name="bg_round_rect_radius">8dp</dimen>
+    <dimen name="bg_round_rect_radius">0dp</dimen>
     <dimen name="notification_container_height">104dp</dimen>
     <dimen name="notification_max_trans">8dp</dimen>
     <dimen name="notification_space">8dp</dimen>
@@ -400,7 +400,7 @@
     <dimen name="developer_options_filter_margins">10dp</dimen>
 
     <!-- Theming related -->
-    <dimen name="default_dialog_corner_radius">26dp</dimen>
+    <dimen name="default_dialog_corner_radius">0dp</dimen>
     <dimen name="dialogCornerRadius">@dimen/default_dialog_corner_radius</dimen>
 
     <!-- Taskbar related (placeholders to compile in Launcher3 without Quickstep) -->
@@ -412,14 +412,14 @@
         @*android:dimen/rounded_corner_content_padding
     </dimen>
     <dimen name="taskbar_stashed_size">0dp</dimen>
-    <dimen name="qsb_widget_height">63dp</dimen>
-    <dimen name="qsb_shadow_height">6dp</dimen>
-    <dimen name="qsb_default_widget_height">52dp</dimen>
-    <dimen name="qsb_search_icon_tap_size">48dp</dimen>
-    <dimen name="qsb_search_icon_padding_start">10dp</dimen>
-    <dimen name="qsb_search_icon_padding_end">8dp</dimen>
-    <dimen name="min_hotseat_icon_space">18dp</dimen>
-    <dimen name="max_hotseat_icon_space">50dp</dimen>
+    <dimen name="qsb_widget_height">0dp</dimen>
+    <dimen name="qsb_shadow_height">0dp</dimen>
+    <dimen name="qsb_default_widget_height">0dp</dimen>
+    <dimen name="qsb_search_icon_tap_size">0dp</dimen>
+    <dimen name="qsb_search_icon_padding_start">0dp</dimen>
+    <dimen name="qsb_search_icon_padding_end">0dp</dimen>
+    <dimen name="min_hotseat_icon_space">0dp</dimen>
+    <dimen name="max_hotseat_icon_space">0dp</dimen>
     <dimen name="min_hotseat_qsb_width">0dp</dimen>
     <dimen name="taskbar_running_app_indicator_height">0dp</dimen>
     <dimen name="taskbar_running_app_indicator_width">0dp</dimen>
@@ -483,7 +483,7 @@
     <dimen name="split_placeholder_inset">16dp</dimen>
     <dimen name="split_placeholder_icon_size">44dp</dimen>
     <dimen name="task_menu_width_grid">216dp</dimen>
-    <dimen name="split_instructions_radius">22dp</dimen>
+    <dimen name="split_instructions_radius">0dp</dimen>
     <dimen name="split_instructions_elevation">1dp</dimen>
     <dimen name="split_instructions_horizontal_padding">24dp</dimen>
     <dimen name="split_instructions_vertical_padding">12dp</dimen>
@@ -492,7 +492,7 @@
     <dimen name="split_instructions_bottom_margin_phone_portrait">60dp</dimen>
     <dimen name="split_instructions_start_margin_cancel">8dp</dimen>
 
-    <dimen name="focus_outline_radius">16dp</dimen>
+    <dimen name="focus_outline_radius">0dp</dimen>
     <dimen name="focus_inner_outline_radius">14dp</dimen>
     <dimen name="focus_outline_stroke_width">2dp</dimen>
     <!-- -4dp for double stroke focus outlines, -2dp for padding between outline and widget,
@@ -500,9 +500,9 @@
     <dimen name="focus_rect_widget_outsets">-6dp</dimen>
 
     <!-- Workspace grid visualization parameters -->
-    <dimen name="grid_visualization_rounding_radius">16dp</dimen>
-    <dimen name="grid_visualization_horizontal_cell_spacing">6dp</dimen>
-    <dimen name="grid_visualization_vertical_cell_spacing">6dp</dimen>
+    <dimen name="grid_visualization_rounding_radius">8dp</dimen>
+    <dimen name="grid_visualization_horizontal_cell_spacing">16dp</dimen>
+    <dimen name="grid_visualization_vertical_cell_spacing">16dp</dimen>
 
     <!-- Search results related parameters -->
     <dimen name="search_row_icon_size">0dp</dimen>

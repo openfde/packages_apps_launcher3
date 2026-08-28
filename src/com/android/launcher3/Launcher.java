@@ -636,7 +636,7 @@ public class Launcher extends StatefulActivity<LauncherState>
 
             // Calling onSaveInstanceState ensures that static cache used by listWidgets is
             // initialized properly.
-            onSaveInstanceState(new Bundle());
+            // onSaveInstanceState(new Bundle());
             if (useModelRepositoryBinding()) {
                 modelCallbacks.rebindOnConfigChange();
             } else {
@@ -1177,6 +1177,7 @@ public class Launcher extends StatefulActivity<LauncherState>
         mOverviewPanel = findViewById(R.id.overview_panel);
         mHotseat = findViewById(R.id.hotseat);
         mHotseat.setWorkspace(mWorkspace);
+        mHotseat.setVisibility(View.GONE);
 
         // Setup the drag layer
         mDragLayer.setup(mDragController, mWorkspace);
@@ -1200,6 +1201,7 @@ public class Launcher extends StatefulActivity<LauncherState>
 
         // Setup the drag controller (drop targets have to be added in reverse order in priority)
         mDropTargetBar.setup(mDragController);
+        mDropTargetBar.setVisibility(View.GONE);
         mAllAppsController.setupViews(mScrimView, mAppsView);
 
         mWorkspace.getPageIndicator().setShouldAutoHide(
@@ -1460,7 +1462,7 @@ public class Launcher extends StatefulActivity<LauncherState>
         } else if (Intent.ACTION_ALL_APPS.equals(intent.getAction())) {
             showAllAppsFromIntent(alreadyOnHome);
         } else if (INTENT_ACTION_ALL_APPS_TOGGLE.equals(intent.getAction())) {
-            toggleAllApps(alreadyOnHome, true);
+            // toggleAllApps(alreadyOnHome, true);
         } else if (Intent.ACTION_SHOW_WORK_APPS.equals(intent.getAction())) {
             showAllAppsWithSelectedTabFromIntent(alreadyOnHome,
                     ActivityAllAppsContainerView.AdapterHolder.WORK);

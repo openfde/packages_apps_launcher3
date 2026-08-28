@@ -20,7 +20,7 @@
     android:focusable="false"
     android:alpha="0"
     android:theme="@style/HomeScreenElementTheme"
-    android:visibility="invisible">
+    android:visibility="gone">
 
     <!-- Delete target -->
     <com.android.launcher3.DeleteDropTarget

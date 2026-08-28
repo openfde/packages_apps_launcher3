@@ -101,16 +101,18 @@ public class Hotseat extends CellLayout implements Insettable {
 
     public Hotseat(Context context) {
         this(context, null);
+        this.setVisibility(View.GONE);
     }
 
     public Hotseat(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
+        this.setVisibility(View.GONE);
     }
 
     public Hotseat(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mQsb = LauncherComponentProvider.get(context).getQsbWidgetFactory().createView(this);
-
+        this.setVisibility(View.GONE);
         addView(mQsb);
         mIconsAlphaChannels = new MultiValueAlpha(getShortcutsAndWidgets(),
                 ALPHA_CHANNEL_CHANNELS_COUNT);
@@ -266,37 +268,37 @@ public class Hotseat extends CellLayout implements Insettable {
 
     @Override
     public void setInsets(Rect insets) {
-        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) getLayoutParams();
-        DeviceProfile grid = mActivity.getDeviceProfile();
+        // FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) getLayoutParams();
+        // DeviceProfile grid = mActivity.getDeviceProfile();
 
-        int topOverlap = 0;
-        if (grid.isVerticalBarLayout()) {
-            mQsb.setVisibility(View.GONE);
-            lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
-            if (grid.isSeascape()) {
-                lp.gravity = Gravity.LEFT;
-                lp.width = grid.getHotseatProfile().getBarSizePx() + insets.left;
-            } else {
-                lp.gravity = Gravity.RIGHT;
-                lp.width = grid.getHotseatProfile().getBarSizePx() + insets.right;
-            }
-        } else {
-            mQsb.setVisibility(View.VISIBLE);
-            lp.gravity = Gravity.BOTTOM;
-            lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        // int topOverlap = 0;
+        // if (grid.isVerticalBarLayout()) {
+        //     mQsb.setVisibility(View.GONE);
+        //     lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        //     if (grid.isSeascape()) {
+        //         lp.gravity = Gravity.LEFT;
+        //         lp.width = grid.getHotseatProfile().getBarSizePx() + insets.left;
+        //     } else {
+        //         lp.gravity = Gravity.RIGHT;
+        //         lp.width = grid.getHotseatProfile().getBarSizePx() + insets.right;
+        //     }
+        // } else {
+        //     mQsb.setVisibility(View.VISIBLE);
+        //     lp.gravity = Gravity.BOTTOM;
+        //     lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
 
-            // Since QSB is laid out relative to bottom, it expects a certain amount of available
-            // space in its parent (hotseat). If hotseatBarSizePx is less than that, we let it go
-            // beyond and offset the content accordingly.
-            int totalHeightForQsb = grid.getQsbOffsetY() + grid.getHotseatProfile().getQsbHeight();
-            topOverlap = Math.max(0, totalHeightForQsb - grid.getHotseatProfile().getBarSizePx());
-            lp.height = grid.getHotseatProfile().getBarSizePx() + topOverlap;
-        }
+        //     // Since QSB is laid out relative to bottom, it expects a certain amount of available
+        //     // space in its parent (hotseat). If hotseatBarSizePx is less than that, we let it go
+        //     // beyond and offset the content accordingly.
+        //     int totalHeightForQsb = grid.getQsbOffsetY() + grid.getHotseatProfile().getQsbHeight();
+        //     topOverlap = Math.max(0, totalHeightForQsb - grid.getHotseatProfile().getBarSizePx());
+        //     lp.height = grid.getHotseatProfile().getBarSizePx() + topOverlap;
+        // }
 
-        Rect padding = grid.getHotseatLayoutPadding(getContext());
-        setPadding(padding.left, padding.top + topOverlap, padding.right, padding.bottom);
-        setLayoutParams(lp);
-        InsettableFrameLayout.dispatchInsets(this, insets);
+        // Rect padding = grid.getHotseatLayoutPadding(getContext());
+        // setPadding(padding.left, padding.top + topOverlap, padding.right, padding.bottom);
+        // setLayoutParams(lp);
+        // InsettableFrameLayout.dispatchInsets(this, insets);
     }
 
     public void setWorkspace(Workspace<?> w) {
@@ -309,27 +311,27 @@ public class Hotseat extends CellLayout implements Insettable {
         // We allow horizontal workspace scrolling from within the Hotseat. We do this by delegating
         // touch intercept the Workspace, and if it intercepts, delegating touch to the Workspace
         // for the remainder of the this input stream.
-        int yThreshold = getMeasuredHeight() - getPaddingBottom();
-        if (mWorkspace != null && ev.getY() <= yThreshold) {
-            mSendTouchToWorkspace = mWorkspace.onInterceptTouchEvent(ev);
-            return mSendTouchToWorkspace;
-        }
+        // int yThreshold = getMeasuredHeight() - getPaddingBottom();
+        // if (mWorkspace != null && ev.getY() <= yThreshold) {
+        //     mSendTouchToWorkspace = mWorkspace.onInterceptTouchEvent(ev);
+        //     return mSendTouchToWorkspace;
+        // }
         return false;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         // See comment in #onInterceptTouchEvent
-        if (mSendTouchToWorkspace) {
-            final int action = event.getAction();
-            switch (action & MotionEvent.ACTION_MASK) {
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    mSendTouchToWorkspace = false;
-            }
-            return mWorkspace.onTouchEvent(event);
-        }
-        // Always let touch follow through to Workspace.
+        // if (mSendTouchToWorkspace) {
+        //     final int action = event.getAction();
+        //     switch (action & MotionEvent.ACTION_MASK) {
+        //         case MotionEvent.ACTION_UP:
+        //         case MotionEvent.ACTION_CANCEL:
+        //             mSendTouchToWorkspace = false;
+        //     }
+        //     return mWorkspace.onTouchEvent(event);
+        // }
+        // // Always let touch follow through to Workspace.
         return false;
     }
 
@@ -337,32 +339,32 @@ public class Hotseat extends CellLayout implements Insettable {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        DeviceProfile dp = mActivity.getDeviceProfile();
-        mQsb.measure(
-                makeMeasureSpec(dp.getHotseatProfile().getQsbWidth(), MeasureSpec.EXACTLY),
-                makeMeasureSpec(dp.getHotseatProfile().getQsbHeight(), MeasureSpec.EXACTLY)
-        );
+        // DeviceProfile dp = mActivity.getDeviceProfile();
+        // mQsb.measure(
+        //         makeMeasureSpec(dp.getHotseatProfile().getQsbWidth(), MeasureSpec.EXACTLY),
+        //         makeMeasureSpec(dp.getHotseatProfile().getQsbHeight(), MeasureSpec.EXACTLY)
+        // );
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
 
-        int qsbMeasuredWidth = mQsb.getMeasuredWidth();
-        int left;
-        DeviceProfile dp = mActivity.getDeviceProfile();
-        if (dp.getHotseatProfile().isQsbInline()) {
-            int qsbSpace = dp.getHotseatProfile().getBorderSpace();
-            left = Utilities.isRtl(getResources()) ? r - getPaddingRight() + qsbSpace
-                    : l + getPaddingLeft() - qsbMeasuredWidth - qsbSpace;
-        } else {
-            left = (r - l - qsbMeasuredWidth) / 2;
-        }
-        int right = left + qsbMeasuredWidth;
+        // int qsbMeasuredWidth = mQsb.getMeasuredWidth();
+        // int left;
+        // DeviceProfile dp = mActivity.getDeviceProfile();
+        // if (dp.getHotseatProfile().isQsbInline()) {
+        //     int qsbSpace = dp.getHotseatProfile().getBorderSpace();
+        //     left = Utilities.isRtl(getResources()) ? r - getPaddingRight() + qsbSpace
+        //             : l + getPaddingLeft() - qsbMeasuredWidth - qsbSpace;
+        // } else {
+        //     left = (r - l - qsbMeasuredWidth) / 2;
+        // }
+        // int right = left + qsbMeasuredWidth;
 
-        int bottom = b - t - dp.getQsbOffsetY();
-        int top = bottom - dp.getHotseatProfile().getQsbHeight();
-        mQsb.layout(left, top, right, bottom);
+        // int bottom = b - t - dp.getQsbOffsetY();
+        // int top = bottom - dp.getHotseatProfile().getQsbHeight();
+        // mQsb.layout(left, top, right, bottom);
     }
 
     /**

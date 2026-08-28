@@ -42,6 +42,27 @@ public class GridOccupancy {
         return false;
     }
 
+    public boolean findVacantCellVertical(int[] vacantOut, int spanX, int spanY) {
+        for (int x = 0; (x + spanX) <= mCountX; x++) {
+            for (int y = 0; (y + spanY) <= mCountY; y++) {
+                boolean available = !cells[x][y];
+                out:
+                for (int j = y; j < y + spanY; j++) {
+                    for (int i = x; i < x + spanX; i++) {
+                        available = available && !cells[i][j];
+                        if (!available) break out;
+                    }
+                }
+                if (available) {
+                    vacantOut[0] = x;
+                    vacantOut[1] = y;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void copyTo(GridOccupancy dest) {
         for (int i = 0; i < mCountX; i++) {
             for (int j = 0; j < mCountY; j++) {

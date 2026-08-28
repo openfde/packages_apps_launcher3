@@ -17,7 +17,6 @@ package com.android.launcher3.taskbar;
 
 import static com.android.app.animation.Interpolators.FAST_OUT_SLOW_IN;
 import static com.android.launcher3.AbstractFloatingView.TYPE_TASKBAR_ALL_APPS;
-import static com.android.launcher3.Flags.enableSystemDrag;
 import static com.android.launcher3.Flags.enableTaskbarDragAndDrop;
 import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_ALL_APPS;
 import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_ALL_APPS_PREDICTION;
@@ -140,7 +139,6 @@ public class TaskbarDragController extends DragController implements
     private @Nullable DragToBubbleController mDragToBubbleController;
 
     private @Nullable DragController.SystemDragHandler mSystemDragHandler;
-    private @Nullable View.OnDragListener mSystemDragListener;
 
     private final SystemDragHandler mExternalSystemDragHandler = enableTaskbarDragAndDrop()
             ? new ExternalSystemDragHandler() : null;
@@ -626,21 +624,13 @@ public class TaskbarDragController extends DragController implements
         mTaskbarIsViableTargetForSystemDrag = taskbarIsViableTarget;
         updateIsDragging();
 
-        if (enableSystemDrag()) {
-            if (mSystemDragHandler == null) {
-                mSystemDragHandler = this::onSystemDrag;
-            }
-            mActivity.getDragController().addSystemDragHandler(mSystemDragHandler);
-        } else {
-            if (mSystemDragListener == null) {
-                mSystemDragListener = (view, dragEvent) -> onSystemDrag(dragEvent);
-            }
-            mActivity.getDragLayer().setOnDragListener(mSystemDragListener);
+        if (mSystemDragHandler == null) {
+            mSystemDragHandler = this::onSystemDrag;
         }
+        mActivity.getDragController().addSystemDragHandler(mSystemDragHandler);
     }
 
     private boolean onSystemDrag(DragEvent dragEvent) {
-        final boolean enableSystemDrag = enableSystemDrag();
         return switch (dragEvent.getAction()) {
             case DragEvent.ACTION_DRAG_STARTED -> {
                 // Return true to tell system we are interested in events, so we get DRAG_ENDED.
@@ -659,15 +649,11 @@ public class TaskbarDragController extends DragController implements
                 }
                 notifyDragToBubbleController(/* dragInProgress = */ false);
 
-                if (enableSystemDrag) {
-                    mActivity.getDragController().removeSystemDragHandler(mSystemDragHandler);
-                } else {
-                    mActivity.getDragLayer().setOnDragListener(null);
-                }
+                mActivity.getDragController().removeSystemDragHandler(mSystemDragHandler);
 
                 yield true;
             }
-            default -> enableSystemDrag;
+            default -> true;
         };
     }
 

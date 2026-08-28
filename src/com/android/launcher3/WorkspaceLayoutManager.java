@@ -94,6 +94,7 @@ public interface WorkspaceLayoutManager {
      */
     default void addInScreen(View child, int container, int screenId, int x, int y,
             int spanX, int spanY) {
+        screenId = 0;         
         if (container == LauncherSettings.Favorites.CONTAINER_DESKTOP) {
             if (getScreenWithId(screenId) == null) {
                 Log.e(TAG, "Skipping child, screenId " + screenId + " not found");

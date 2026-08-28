@@ -86,6 +86,11 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import android.view.WindowManager;
+import android.view.WindowMetrics;
+import android.graphics.Point;
+import android.graphics.Rect;
+
 @LauncherAppSingleton
 public class InvariantDeviceProfile {
 
@@ -375,11 +380,23 @@ public class InvariantDeviceProfile {
                 && Utilities.isEnglishLanguage(context)
                 && mPrefs.get(ENABLE_TWOLINE_ALLAPPS_TOGGLE);
         mLocale = context.getResources().getConfiguration().locale.toString();
-
+        iconSize = displayOption.iconSizes;
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        WindowMetrics windowMetrics = windowManager.getCurrentWindowMetrics();
+        Rect boundsRect = windowMetrics.getBounds();
+        float density = metrics.density;
+        float width = boundsRect.width();
+        float height = boundsRect.height()- (68 * density) ;
         GridOption closestProfile = displayOption.grid;
-        numRows = closestProfile.numRows;
-        numColumns = closestProfile.numColumns;
+        // numRows = closestProfile.numRows;
+        // numColumns = closestProfile.numColumns;
+        float iconPixel = iconSize[INDEX_DEFAULT] * density;
+        int heightPixels = metrics.heightPixels;
+        int widthPixels = metrics.widthPixels;
+        double row = (height * 0.5) / iconPixel ;
+        numRows = (int)Math.floor(row);
+        numColumns = (int) ((widthPixels * 0.5) / iconPixel);
         numSearchContainerColumns = closestProfile.numSearchContainerColumns;
         dbFile = closestProfile.dbFile;
         gridType = closestProfile.gridType;
@@ -413,7 +430,7 @@ public class InvariantDeviceProfile {
 
         inlineNavButtonsEndSpacing = closestProfile.inlineNavButtonsEndSpacing;
 
-        iconSize = displayOption.iconSizes;
+       
         float maxIconSize = iconSize[0];
         for (int i = 1; i < iconSize.length; i++) {
             maxIconSize = Math.max(maxIconSize, iconSize[i]);

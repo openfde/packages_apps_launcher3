@@ -165,7 +165,7 @@ public class LauncherPreviewRenderer extends BaseContext
                 mDp.getWorkspaceProfile().getWorkspacePadding().bottom
                         + mDp.getWorkspaceProfile().getCellLayoutPaddingPx().bottom
         );
-
+        firstScreen.setPadding(0,0,0,0);
         if (mDp.getDeviceProperties().isTwoPanels()) {
             CellLayout rightPanel = mRootView.findViewById(R.id.workspace_right);
             rightPanel.setPadding(
