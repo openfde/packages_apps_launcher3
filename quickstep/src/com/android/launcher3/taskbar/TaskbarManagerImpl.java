@@ -83,6 +83,7 @@ import com.android.launcher3.taskbar.unfold.NonDestroyableScopedUnfoldTransition
 import com.android.launcher3.util.ListenableStream;
 import com.android.launcher3.util.LockedUserState;
 import com.android.launcher3.util.MutableListenableStream;
+import com.android.launcher3.util.PluginManagerWrapper;
 import com.android.launcher3.util.PostUnlockObject;
 import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.SafeCloseable;
@@ -102,6 +103,8 @@ import com.android.quickstep.util.SystemUiFlagUtils;
 import com.android.quickstep.views.RecentsViewContainer;
 import com.android.quickstep.views.RecentsViewContainerInteractor;
 import com.android.quickstep.window.RecentsWindowManager;
+import com.android.systemui.plugins.PluginListener;
+import com.android.systemui.plugins.TaskbarPlugin;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 import com.android.systemui.shared.system.ActivityManagerWrapper;
 import com.android.systemui.shared.system.QuickStepContract;
@@ -124,7 +127,7 @@ import javax.inject.Provider;
  * Class to manage taskbar lifecycle
  */
 @SysUIConnectionSingleton
-public class TaskbarManagerImpl {
+public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
     private static final String TAG = "TaskbarManager";
     private static final boolean DEBUG = false;
     private static final int TASKBAR_DESTROY_DURATION = 100;
@@ -237,6 +240,8 @@ public class TaskbarManagerImpl {
 
     private final AllAppsActionManager mAllAppsActionManager;
     private AmbientCueRepository mAmbientCueRepository;
+
+    private volatile @Nullable TaskbarPlugin mTaskbarPlugin;
 
     private @Nullable SafeCloseable mActivityOnDestroySafeCloseable;
 
@@ -395,6 +400,10 @@ public class TaskbarManagerImpl {
         cleanupTasks.addCloseable(getTaskbarUiThread(), mUnlockedIDP);
         mPrimaryResource.debugMsg("TaskbarManager created");
 
+        // Register for a taskbar plugin so a custom taskbar can replace the default content.
+        PluginManagerWrapper.INSTANCE.get(mBaseContext).addPluginListener(this,
+                TaskbarPlugin.class, false /* allowMultiple */);
+
         cleanupTasks.addTask(getTaskbarUiThread(), () -> {
             mPrimaryResource.debugMsg("TaskbarManager#destroy()");
             mRecentsViewContainerInteractor = null;
@@ -404,6 +413,25 @@ public class TaskbarManagerImpl {
             mBootAppContext = null;
             removeActivityCallbacksAndListeners();
         });
+    }
+
+    @Override
+    public void onPluginConnected(TaskbarPlugin plugin, Context context) {
+        mTaskbarPlugin = plugin;
+        getTaskbarUiThread().execute(this::recreateTaskbars);
+    }
+
+    @Override
+    public void onPluginDisconnected(TaskbarPlugin plugin) {
+        mTaskbarPlugin = null;
+        getTaskbarUiThread().execute(this::recreateTaskbars);
+    }
+
+    private void applyTaskbarPlugin(TaskbarActivityContext taskbar) {
+        TaskbarPlugin plugin = mTaskbarPlugin;
+        if (plugin != null) {
+            taskbar.setPluginRootView(plugin.setup(taskbar.getDragLayer()));
+        }
     }
 
     @VisibleForTesting
@@ -810,6 +838,7 @@ public class TaskbarManagerImpl {
             taskbarRootLayout.addView(taskbar.getDragLayer());
             taskbarRootLayout.setVisibility(getTaskbarVisibility(taskbar.isUserSetupComplete()));
             taskbar.notifyUpdateLayoutParams();
+            applyTaskbarPlugin(taskbar);
         } finally {
             Trace.endSection();
             if (taskbar != null) {

@@ -989,6 +989,17 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
         return mDragLayer;
     }
 
+    /**
+     * Replaces the default taskbar content with the plugin-provided root view.
+     */
+    public void setPluginRootView(View pluginRoot) {
+        mDragLayer.removeAllViews();
+        if (pluginRoot != null) {
+            mDragLayer.addView(pluginRoot, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        }
+    }
+
     @Override
     public Rect getFolderBoundingBox() {
         return mControllers.taskbarDragLayerController.getFolderBoundingBox();
