@@ -990,14 +990,10 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
     }
 
     /**
-     * Replaces the default taskbar content with the plugin-provided root view.
+     * Removes the default taskbar content so a plugin can replace it with its own view.
      */
-    public void setPluginRootView(View pluginRoot) {
+    public void clearTaskbarContent() {
         mDragLayer.removeAllViews();
-        if (pluginRoot != null) {
-            mDragLayer.addView(pluginRoot, new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        }
     }
 
     @Override

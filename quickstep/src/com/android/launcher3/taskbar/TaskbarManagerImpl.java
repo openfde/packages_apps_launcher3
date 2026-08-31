@@ -430,7 +430,8 @@ public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
     private void applyTaskbarPlugin(TaskbarActivityContext taskbar) {
         TaskbarPlugin plugin = mTaskbarPlugin;
         if (plugin != null) {
-            taskbar.setPluginRootView(plugin.setup(taskbar.getDragLayer()));
+            taskbar.clearTaskbarContent();
+            plugin.setup(taskbar.getDragLayer());
         }
     }
 
