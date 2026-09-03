@@ -419,7 +419,7 @@ public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
     public void onPluginConnected(TaskbarPlugin plugin, Context context) {
         mTaskbarPlugin = plugin;
         // Directly apply to existing taskbars instead of fully recreating them (slow).
-        getTaskbarUiThread().execute(this::applyPluginToExistingTaskbars);
+//        getTaskbarUiThread().execute(this::applyPluginToExistingTaskbars);
     }
 
     @Override
