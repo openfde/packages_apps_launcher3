@@ -18,7 +18,7 @@ package com.android.launcher3.uioverrides.plugins;
 
 import static android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS;
 
-import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
+import static com.android.launcher3.util.Executors.THREAD_POOL_EXECUTOR;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -56,7 +56,7 @@ public class PluginManagerWrapperImpl extends PluginManagerWrapper {
         // Use null preHandlerManager, as the handler is never unregistered which can cause leaks
         // when using multiple dagger graphs.
         mPluginManager = PluginManagerImpl.create(c, Collections.emptyList(),
-                mPluginEnabler, MODEL_EXECUTOR, null /* preHandlerManager */);
+                mPluginEnabler, THREAD_POOL_EXECUTOR, null /* preHandlerManager */);
     }
 
     public PluginEnablerImpl getPluginEnabler() {
