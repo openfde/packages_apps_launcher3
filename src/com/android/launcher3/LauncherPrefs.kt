@@ -301,7 +301,7 @@ constructor(@ApplicationContext private val encryptedContext: Context) {
             nonRestorableItem("no_db_files_restored", false, EncryptionType.DEVICE_PROTECTED)
         @JvmField
         val IS_FIRST_LOAD_AFTER_RESTORE =
-            nonRestorableItem(FIRST_LOAD_AFTER_RESTORE_KEY, false, EncryptionType.ENCRYPTED)
+            nonRestorableItem(FIRST_LOAD_AFTER_RESTORE_KEY, false, EncryptionType.DEVICE_PROTECTED)
         @JvmField val APP_WIDGET_IDS = backedUpItem(RestoreDbTask.APPWIDGET_IDS, "")
         @JvmField val OLD_APP_WIDGET_IDS = backedUpItem(RestoreDbTask.APPWIDGET_OLD_IDS, "")
 
