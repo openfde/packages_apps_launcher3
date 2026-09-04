@@ -55,8 +55,13 @@ public class PluginManagerWrapperImpl extends PluginManagerWrapper {
         mPluginEnabler = new PluginEnablerImpl(launcherPrefs);
         // Use null preHandlerManager, as the handler is never unregistered which can cause leaks
         // when using multiple dagger graphs.
-        mPluginManager = PluginManagerImpl.create(c, Collections.emptyList(),
-                mPluginEnabler, THREAD_POOL_EXECUTOR, null /* preHandlerManager */);
+        // Use a device-protected storage context so PluginPrefs can be read before the user is
+        // unlocked (TouchInteractionService is direct-boot aware and starts before unlock).
+        // Otherwise getSharedPreferences() on credential-protected storage throws
+        // IllegalStateException and crashes the launcher.
+        mPluginManager = PluginManagerImpl.create(c.createDeviceProtectedStorageContext(),
+                Collections.emptyList(), mPluginEnabler, THREAD_POOL_EXECUTOR,
+                null /* preHandlerManager */);
     }
 
     public PluginEnablerImpl getPluginEnabler() {
@@ -75,7 +80,7 @@ public class PluginManagerWrapperImpl extends PluginManagerWrapper {
     }
 
     public Set<String> getPluginActions() {
-        return new PluginPrefs(mContext).getPluginList();
+        return new PluginPrefs(mContext.createDeviceProtectedStorageContext()).getPluginList();
     }
 
     /** Notifies that a plugin state has changed */
