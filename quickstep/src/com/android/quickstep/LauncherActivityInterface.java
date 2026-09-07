@@ -28,6 +28,7 @@ import static com.android.launcher3.util.MultiPropertyFactory.MULTI_PROPERTY_VAL
 import android.animation.Animator;
 import android.content.Context;
 import android.graphics.Rect;
+import android.util.Log;
 import android.view.RemoteAnimationTarget;
 
 import androidx.annotation.NonNull;
@@ -238,9 +239,12 @@ public final class LauncherActivityInterface extends
         if (launcher == null) {
             return false;
         }
-        if (mDesktopState.getShouldShowHomeBehindDesktop() && !launcher.hasWindowFocus()) {
-            // Home is always shown behind desktop, but it is currently not the top task, so treat
-            // it as if it is not visible.
+        if (!launcher.hasWindowFocus()) {
+            // Launcher is resumed but not focused (e.g. home is shown behind the desktop, or the
+            // launcher is not the top task). Treat it as not visible so the shell recents
+            // transition is used, which properly hides home / pauses the desk / moves focus.
+            Log.d("FdeTaskSwitch", "[switchToRecentsIfVisible] -> false (resumed but no focus)"
+                    + " -> shell recents");
             return false;
         }
         if (isInLiveTileMode()) {
@@ -254,6 +258,8 @@ public final class LauncherActivityInterface extends
         launcher.getStateManager().goToState(OVERVIEW,
                 launcher.getStateManager().shouldAnimateStateChange(),
                 animatorListener);
+        Log.d("FdeTaskSwitch", "[switchToRecentsIfVisible] -> true (direct state switch,"
+                + " NO shell recents)");
         return true;
     }
 
