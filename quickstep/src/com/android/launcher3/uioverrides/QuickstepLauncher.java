@@ -36,6 +36,7 @@ import static com.android.launcher3.LauncherSettings.Favorites.CONTAINER_HOTSEAT
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION;
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT;
 import static com.android.launcher3.LauncherState.ALL_APPS;
+import static com.android.launcher3.LauncherState.APP_OVERVIEW;
 import static com.android.launcher3.LauncherState.FLAG_SKIP_STATE_ANNOUNCEMENT;
 import static com.android.launcher3.LauncherState.HOTSEAT_ICONS;
 import static com.android.launcher3.LauncherState.NORMAL;
@@ -81,8 +82,10 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.app.ActivityOptions;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.ShortcutInfo;
 import android.content.res.Configuration;
@@ -263,6 +266,10 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
 
     protected static final String RING_APPEAR_ANIMATION_PREFIX = "RingAppearAnimation\t";
 
+    private static final String ACTION_APP_OVERLAY_VISIBLE =
+            "com.android.launcher3.action.APP_OVERLAY_VISIBLE";
+    private static final String EXTRA_APP_OVERLAY_VISIBLE = "visible";
+
     private PredictedContainerInfo mAllAppsPredictions;
     private HotseatPredictionController mHotseatPredictionController;
     private LauncherDepthController mDepthController;
@@ -302,6 +309,25 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     private boolean mCanShowAllAppsEducationView;
 
     private boolean mIsOverlayVisible;
+
+    /**
+     * Listens for the taskbar plugin's overlay visibility (e.g. AppOverviewWindow) and drives the
+     * matching launcher state.
+     */
+    private final BroadcastReceiver mAppOverlayReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean visible = intent.getBooleanExtra(EXTRA_APP_OVERLAY_VISIBLE, false);
+            LauncherState currentState = getStateManager().getState();
+            if (visible) {
+                if (currentState == NORMAL) {
+                    getStateManager().goToState(APP_OVERVIEW, isResumed());
+                }
+            } else if (currentState == APP_OVERVIEW) {
+                getStateManager().goToState(NORMAL, isResumed());
+            }
+        }
+    };
 
     private final OverviewChangeListener mOverviewChangeListener = this::onOverviewTargetChanged;
 
@@ -637,6 +663,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
 
     @Override
     public void onDestroy() {
+        unregisterReceiver(mAppOverlayReceiver);
         if (mAppTransitionManager != null) {
             mAppTransitionManager.onActivityDestroyed();
         }
@@ -791,6 +818,8 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         OverviewComponentObserver.INSTANCE.get(this)
                 .addOverviewChangeListener(mOverviewChangeListener);
         new TraceStateLoggerHelper(this).startTraceStateLogger();
+        registerReceiver(mAppOverlayReceiver, new IntentFilter(ACTION_APP_OVERLAY_VISIBLE),
+                Context.RECEIVER_NOT_EXPORTED);
     }
 
     @Override

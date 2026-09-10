@@ -22,6 +22,7 @@ import static com.android.launcher3.anim.AnimatorListeners.forEndCallback;
 import static com.android.launcher3.logging.StatsLogManager.LAUNCHER_STATE_HOME;
 import static com.android.launcher3.logging.StatsLogManager.LAUNCHER_STATE_OVERVIEW;
 import static com.android.launcher3.testing.shared.TestProtocol.ALL_APPS_STATE_ORDINAL;
+import static com.android.launcher3.testing.shared.TestProtocol.APP_OVERVIEW_STATE_ORDINAL;
 import static com.android.launcher3.testing.shared.TestProtocol.BACKGROUND_APP_STATE_ORDINAL;
 import static com.android.launcher3.testing.shared.TestProtocol.DESKTOP_DRAG_MODE_ORDINAL;
 import static com.android.launcher3.testing.shared.TestProtocol.EDIT_MODE_STATE_ORDINAL;
@@ -49,6 +50,7 @@ import com.android.launcher3.states.EditModeState;
 import com.android.launcher3.states.SpringLoadedState;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.uioverrides.states.AllAppsState;
+import com.android.launcher3.uioverrides.states.AppOverviewState;
 import com.android.launcher3.uioverrides.states.HintState;
 import com.android.launcher3.uioverrides.states.OverviewState;
 import com.android.launcher3.views.ActivityContext;
@@ -120,7 +122,7 @@ public abstract class LauncherState implements BaseState<LauncherState> {
                 }
             };
 
-    private static final LauncherState[] sAllStates = new LauncherState[12];
+    private static final LauncherState[] sAllStates = new LauncherState[13];
 
     /**
      * TODO: Create a separate class for NORMAL state.
@@ -144,6 +146,12 @@ public abstract class LauncherState implements BaseState<LauncherState> {
             SPRING_LOADED_STATE_ORDINAL);
     public static final LauncherState DESKTOP_DRAG_MODE = new DesktopDragModeState(
             DESKTOP_DRAG_MODE_ORDINAL);
+    /**
+     * State used while a plugin-provided app overview overlay (e.g. the taskbar plugin's
+     * AppOverviewWindow) is visible. Only scales down the workspace and hides its icons.
+     */
+    public static final LauncherState APP_OVERVIEW = new AppOverviewState(
+            APP_OVERVIEW_STATE_ORDINAL);
     public static final LauncherState EDIT_MODE = new EditModeState(EDIT_MODE_STATE_ORDINAL);
     public static final LauncherState ALL_APPS = new AllAppsState(ALL_APPS_STATE_ORDINAL);
     public static final LauncherState HINT_STATE = new HintState(HINT_STATE_ORDINAL);
