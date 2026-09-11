@@ -1,0 +1,4 @@
+# Gradle port: prebuilts/ and rom.properties are committed on purpose so a
+# fresh clone can build without access to the ROM build host.
+# Use tools/sync_from_rom.ps1 to refresh prebuilts/ when the ROM is rebuilt.
+__pycache__/

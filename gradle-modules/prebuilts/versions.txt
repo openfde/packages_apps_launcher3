@@ -1,0 +1,18 @@
+--- dagger ---
+external/dagger2/.bazelversion
+external/dagger2/gradle/libs.versions.toml
+external/dagger2/util/validate-dagger-version.sh
+external/dagger2/util/latest-dagger-version.sh
+external/dagger2/examples/bazel/.bazelversion
+    version: "f7e31b8572df4d791816dfb30a875231176e41d5"
+--- protobuf ---
+{
+    "33.x": {
+        "protoc_version": "33.5",
+        "lts": false,
+        "date": "2026-01-29",
+        "languages": {
+            "cpp": "6.33.5",
+            "csharp": "3.33.5",
+--- kotlinc ---
+2.2.0-custom-branch-22
