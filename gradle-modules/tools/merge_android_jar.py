@@ -1,12 +1,18 @@
-"""Merge the AOSP framework classes + framework-res resources into the SDK android.jar.
+"""Merge the AOSP platform ABI classes + framework-res resources into the SDK android.jar.
 
 AGP/javac resolve android.* from the compileSdk android.jar only, so hidden platform
-classes (e.g. android.widget.TextClock.ClockEventDelegate) and private framework
-resources are invisible unless they are part of that jar. This script rebuilds
-platforms/android-37.0/android.jar as:
-    framework.jar classes  (authoritative platform classes, hidden APIs)
-  + SDK android.jar classes (public extras not present in framework.jar)
-  + framework-res.apk resources (resources.arsc + res/**, private resources)
+classes (e.g. android.widget.TextClock.ClockEventDelegate), hidden aconfig flag classes
+and private framework resources are invisible unless they are part of that jar. This
+script rebuilds platforms/android-37.0/android.jar as:
+
+    framework-jarjar-turbine.jar  (relocated platform ABI, hidden classes at real names)
+  + SDK android.jar classes       (public extras not present in the ABI jar)
+  + framework-res.apk resources   (resources.arsc + res/**, private resources)
+
+The full framework.jar (real method bodies) is intentionally NOT merged: Android
+Studio's MockableJarTransform rewrites every class with ASM COMPUTE_FRAMES and crashes
+with a NullPointerException on some real framework bytecode. The turbine ABI jar has
+signatures only, which is also exactly what Soong uses for compilation.
 
 The original android.jar is kept as android.jar.gradle-backup.
 """
@@ -17,7 +23,6 @@ import sys
 import zipfile
 
 SDK_JAR = r"D:\huyang\Android\sdk\platforms\android-37.0\android.jar"
-FRAMEWORK_JAR = r"D:\code\packages_apps_launcher3\gradle-modules\prebuilts\platform\framework.jar"
 FRAMEWORK_TURBINE = (
     r"D:\code\packages_apps_launcher3\gradle-modules\prebuilts\platform\framework-jarjar-turbine.jar"
 )
@@ -40,15 +45,7 @@ def main() -> None:
                     continue
                 seen.add(name)
                 out.writestr(item, tz.read(name))
-        # 2. full framework.jar classes not already present
-        with zipfile.ZipFile(FRAMEWORK_JAR) as fz:
-            for item in fz.infolist():
-                name = item.filename
-                if name.startswith("META-INF/") or name.endswith("/") or name in seen:
-                    continue
-                seen.add(name)
-                out.writestr(item, fz.read(name))
-        # 3. SDK android.jar classes not already present
+        # 2. SDK android.jar classes not already present
         with zipfile.ZipFile(BACKUP) as sz:
             for item in sz.infolist():
                 name = item.filename
@@ -60,7 +57,7 @@ def main() -> None:
                     continue
                 seen.add(name)
                 out.writestr(item, sz.read(name))
-        # 4. framework-res resources
+        # 3. framework-res resources
         with zipfile.ZipFile(FRAMEWORK_RES) as rz:
             for item in rz.infolist():
                 name = item.filename

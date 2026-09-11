@@ -74,9 +74,13 @@ D:\code\packages_apps_launcher3\
 ## 依赖引入方式（核心思路）
 
 1. **平台隐藏 API**：Soong 编译 Launcher3QuickStep 用的是平台私有 API。
-   - 把 ROM 的 `framework.jar` + `framework-jarjar-turbine.jar`（hidden aconfig 类已重定位）
+   - 把 ROM 的 `framework-jarjar-turbine.jar`（hidden aconfig 类已重定位的 **ABI 版**）
      + `framework-res.apk` 的资源表合并进 SDK 的 `platforms/android-37.0/android.jar`
      （原文件备份为 `android.jar.gradle-backup`，脚本 `tools/merge_android_jar.py`）。
+   - 注意**不能**把完整 `framework.jar`（含真实方法体）合并进去：Android Studio 的
+     MockableJarTransform 会用 ASM `COMPUTE_FRAMES` 重写 android.jar 里的每个类，遇到部分
+     真实 framework 字节码会抛 `NullPointerException`；turbine ABI 只含签名，且与 Soong
+     编译 Launcher3 时使用的输入一致。
    - 这样 javac/KSP/aapt2 才能看到 `com.android.internal.*`、`android.companion.Flags`、
      `android.widget.TextClock$ClockEventDelegate`、私有 framework 资源等。
 2. **AOSP 内部静态库**（SystemUI shared、WM Shell shared、iconloader、mechanics、msdl、
@@ -180,6 +184,7 @@ $env:ROM_PASS = "密码"      # 无 SSH key 时使用
 | 安装报 `INSTALL_FAILED_VERSION_DOWNGRADE` | 设备上的 Launcher versionCode=37 | `defaultConfig` 已对齐 `versionCode 37 / versionName "17"` |
 | 安装报 `signatures do not match` | ROM 用的是 AOSP `testkey` 而不是 platform key | `prebuilts/keys/testkey.*` + `sign_platform.ps1` 默认用 testkey |
 | Android Studio 同步报 `Unsupported class file major version 69` | Studio 自带 JBR 25（Java 25 = major 69），Gradle 8.13 的 Groovy 不支持在 JDK 25 上运行 | `Settings → Build Tools → Gradle → Gradle JDK` 改为 **JDK 21**（Add JDK 指向 Temurin 21）；同时确认 `gradle.properties` 里 `org.gradle.java.home` 路径在本机存在 |
+| Android Studio 同步报 `MockableJarTransform ... NullPointerException` | android.jar 里合并了含真实方法体的 framework.jar，AGP 的 mockable 转换用 ASM `COMPUTE_FRAMES` 重写时崩溃（`handlerRangeBlock is null`） | `merge_android_jar.py` 已改为只用 turbine ABI 类 + framework-res 资源，重新执行一次该脚本即可 |
 
 ## 设备部署（已验证）
 
