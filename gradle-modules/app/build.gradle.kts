@@ -24,6 +24,28 @@ android {
         versionName = "17"
     }
 
+    // Sign with the ROM key so Studio Run/install and adb install -r can replace the
+    // system Launcher (testkey for the FDE ROM; regenerate the p12 from platform.pk8
+    // for ROMs signed with the platform key).
+    signingConfigs {
+        create("rom") {
+            storeFile = file("$prebuilts/keys/testkey.p12")
+            storePassword = "android"
+            keyAlias = "testkey"
+            keyPassword = "android"
+            storeType = "PKCS12"
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("rom")
+        }
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("rom")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21

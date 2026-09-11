@@ -114,5 +114,6 @@ python (Join-Path $tools "postprocess_prebuilts.py")
 python (Join-Path $tools "sync_res.py")
 python (Join-Path $tools "merge_android_jar.py")
 & (Join-Path $tools "make_appwidget_stub.ps1")
+& (Join-Path $tools "make_keystore.ps1")
 
 Write-Host "== done. Run: .\gradlew.bat :app:assembleDebug --no-parallel =="

@@ -12,15 +12,14 @@ cd D:\code\packages_apps_launcher3
 # 编译 debug APK
 .\gradlew.bat :app:assembleDebug --no-parallel
 
-# 产物
-#   gradle-modules\app\build\outputs\apk\debug\app-debug.apk        （debug 签名）
-#   gradle-modules\app\build\outputs\apk\debug\app-testkey-signed.apk（ROM 用的 testkey 签名，可覆盖安装）
+# 产物（debug/release 都已用 ROM 的 testkey 自动签名，可直接 Studio Run / adb install -r）
+#   gradle-modules\app\build\outputs\apk\debug\app-debug.apk
 
-# 平台签名（FDE ROM 用 testkey；换 ROM 时可用 -KeyName platform）
+# 可选：单独导出签名 APK 或换 key（正常编译安装不需要执行）
 .\gradle-modules\tools\sign_platform.ps1
 
 # 安装到设备（同包名 + 同签名 + versionCode 对齐后可覆盖系统 Launcher）
-adb install -r .\gradle-modules\app\build\outputs\apk\debug\app-testkey-signed.apk
+adb install -r .\gradle-modules\app\build\outputs\apk\debug\app-debug.apk
 ```
 
 > **首次克隆必读**：`prebuilts/`（约 200MB 的 ROM 依赖快照，含 framework.jar、SystemUI AAR、
@@ -65,7 +64,7 @@ D:\code\packages_apps_launcher3\
 │  │  ├─ platform\              # framework.jar、framework-jarjar-turbine.jar、framework-res.apk
 │  │  ├─ generated\             # BuildConfig.java、protolog/proto srcjar、aconfig 源码
 │  │  ├─ manifest\              # Soong 合并后的 AndroidManifest.xml（manifest_merger）
-│  │  └─ keys\                  # testkey / platform 的 pk8 + x509.pem（签名）
+│  │  └─ keys\                  # testkey / platform 的 pk8 + x509.pem + 生成的 p12（Gradle 签名）
 │  ├─ rom.properties            # ROM 主机连接配置（已提交，换人用时修改）
 │  └─ tools\                    # 抽取/补丁/同步/签名脚本
 └─ 其余为 AOSP 原始目录（src、quickstep、res、modules、shared、dagger、src_plugins…）
@@ -119,7 +118,7 @@ $env:ROM_PASS = "密码"      # 无 SSH key 时使用
 
 脚本会：上传抽取脚本 → 远端运行（抽取 + 自建 AAR + flag jar）→ 打包下载 → 替换 `prebuilts/` →
 运行 `postprocess_prebuilts.py`（AAR 元数据/资源补丁、剔除重复类）→ `sync_res.py` →
-`merge_android_jar.py` → `make_appwidget_stub.ps1`。
+`merge_android_jar.py` → `make_appwidget_stub.ps1` → `make_keystore.ps1`（由 pk8/x509 重新生成 p12）。
 
 同步后必须重新编译（`--no-parallel`，避免 Windows 下 AGP 并行任务的文件占用问题）。
 
@@ -185,6 +184,7 @@ $env:ROM_PASS = "密码"      # 无 SSH key 时使用
 | 安装报 `signatures do not match` | ROM 用的是 AOSP `testkey` 而不是 platform key | `prebuilts/keys/testkey.*` + `sign_platform.ps1` 默认用 testkey |
 | Android Studio 同步报 `Unsupported class file major version 69` | Studio 自带 JBR 25（Java 25 = major 69），Gradle 8.13 的 Groovy 不支持在 JDK 25 上运行 | `Settings → Build Tools → Gradle → Gradle JDK` 改为 **JDK 21**（Add JDK 指向 Temurin 21）；同时确认 `gradle.properties` 里 `org.gradle.java.home` 路径在本机存在 |
 | Android Studio 同步报 `MockableJarTransform ... NullPointerException` | android.jar 里合并了含真实方法体的 framework.jar，AGP 的 mockable 转换用 ASM `COMPUTE_FRAMES` 重写时崩溃（`handlerRangeBlock is null`） | `merge_android_jar.py` 已改为只用 turbine ABI 类 + framework-res 资源，重新执行一次该脚本即可 |
+| Studio Run 报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`（签名不一致） | Studio 默认用 debug keystore 签名，设备上的 Launcher 是 testkey 签名 | `app/build.gradle.kts` 已配置 `signingConfigs.rom`（testkey.p12）并应用到 debug/release；同步后若 p12 丢失，跑 `tools/make_keystore.ps1` 重新生成 |
 
 ## 设备部署（已验证）
 
