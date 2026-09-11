@@ -179,6 +179,7 @@ $env:ROM_PASS = "密码"      # 无 SSH key 时使用
 | HOME 图标不出现 / `FallbackHome` | 抽到了 `manifest_fixer`（只有 6 个组件），正确的合并 manifest 是 `manifest_merger`（含 `QuickstepLauncher` + HOME） | `extract_prebuilts.sh` 已改为取 `manifest_merger/AndroidManifest.xml` |
 | 安装报 `INSTALL_FAILED_VERSION_DOWNGRADE` | 设备上的 Launcher versionCode=37 | `defaultConfig` 已对齐 `versionCode 37 / versionName "17"` |
 | 安装报 `signatures do not match` | ROM 用的是 AOSP `testkey` 而不是 platform key | `prebuilts/keys/testkey.*` + `sign_platform.ps1` 默认用 testkey |
+| Android Studio 同步报 `Unsupported class file major version 69` | Studio 自带 JBR 25（Java 25 = major 69），Gradle 8.13 的 Groovy 不支持在 JDK 25 上运行 | `Settings → Build Tools → Gradle → Gradle JDK` 改为 **JDK 21**（Add JDK 指向 Temurin 21）；同时确认 `gradle.properties` 里 `org.gradle.java.home` 路径在本机存在 |
 
 ## 设备部署（已验证）
 
