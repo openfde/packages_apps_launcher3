@@ -40,7 +40,7 @@ adb install -r .\gradle-modules\app\build\outputs\apk\debug\app-debug.apk
 
 | 项目 | 要求 |
 |---|---|
-| JDK | 21（已在 `gradle.properties` 固定为 `D:/huyang/.gradle/jdks/eclipse_adoptium-21-amd64-windows.2`） |
+| JDK | **21（任意发行版均可）**。`gradle.properties` 默认指向 `D:/huyang/.gradle/jdks/eclipse_adoptium-21-amd64-windows.2`（原机器上 Gradle 自动下载的 Temurin 21）；换机器改这一行，或删除该行并设置 `JAVA_HOME` / Studio 的 Gradle JDK 为 JDK 21。辅助脚本自动探测：`LAUNCHER_JDK` → `JAVA_HOME` → `GRADLE_USER_HOME\jdks` → `PATH` |
 | Gradle | 8.13（wrapper 已生成，本地已缓存） |
 | AGP / Kotlin | 8.13.2 / 2.2.10 |
 | Android SDK | `local.properties` 指向 `D:/huyang/Android/sdk`，compileSdk 37 |

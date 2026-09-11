@@ -10,9 +10,9 @@ $moduleRoot = Split-Path -Parent $tools
 $prebuilts = Join-Path $moduleRoot "prebuilts"
 $outJar = Join-Path $prebuilts "jars\android-appwidget-flags-stub.jar"
 
-$jdk = "D:\huyang\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2"
-if (-not (Test-Path (Join-Path $jdk "bin\javac.exe"))) {
-    throw "JDK 21 not found at $jdk"
+$jdk = & {
+    . (Join-Path $PSScriptRoot "find-jdk.ps1")
+    Get-Jdk21
 }
 
 $work = Join-Path $env:TEMP "launcher_appwidget_stub"

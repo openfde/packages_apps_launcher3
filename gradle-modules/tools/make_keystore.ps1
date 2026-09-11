@@ -9,9 +9,9 @@ $tools = Split-Path -Parent $MyInvocation.MyCommand.Path
 $moduleRoot = Split-Path -Parent $tools
 $keys = Join-Path $moduleRoot "prebuilts\keys"
 
-$jdk = "D:\huyang\.gradle\jdks\eclipse_adoptium-21-amd64-windows.2"
-if (-not (Test-Path (Join-Path $jdk "bin\java.exe"))) {
-    throw "JDK 21 not found at $jdk"
+$jdk = & {
+    . (Join-Path $PSScriptRoot "find-jdk.ps1")
+    Get-Jdk21
 }
 
 $work = Join-Path $env:TEMP "launcher_make_keystore"
