@@ -102,6 +102,7 @@ import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.SparseArray;
+import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.View;
@@ -197,6 +198,7 @@ import com.android.launcher3.util.WindowBlurState;
 import com.android.launcher3.views.FloatingIconView;
 import com.android.quickstep.BaseContainerInterface;
 import com.android.quickstep.LauncherActivityInterface;
+import com.android.quickstep.OverviewCommandHelper;
 import com.android.quickstep.OverviewComponentObserver;
 import com.android.quickstep.OverviewComponentObserver.OverviewChangeListener;
 import com.android.quickstep.RecentsAnimationDeviceState;
@@ -270,6 +272,10 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
             "com.android.launcher3.action.APP_OVERLAY_VISIBLE";
     private static final String EXTRA_APP_OVERLAY_VISIBLE = "visible";
 
+    /** Sent by the taskbar plugin to toggle the overview (same as the recents key). */
+    private static final String ACTION_SHOW_RECENTS =
+            "com.android.launcher3.action.SHOW_RECENTS";
+
     private PredictedContainerInfo mAllAppsPredictions;
     private HotseatPredictionController mHotseatPredictionController;
     private LauncherDepthController mDepthController;
@@ -317,6 +323,10 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     private final BroadcastReceiver mAppOverlayReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (ACTION_SHOW_RECENTS.equals(intent.getAction())) {
+                showRecents();
+                return;
+            }
             boolean visible = intent.getBooleanExtra(EXTRA_APP_OVERLAY_VISIBLE, false);
             LauncherState currentState = getStateManager().getState();
             if (visible) {
@@ -328,6 +338,24 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
             }
         }
     };
+
+    /**
+     * Toggles the overview the same way as the system recents key: routes through the
+     * {@link OverviewCommandHelper} so the shell starts the recents transition.
+     */
+    private void showRecents() {
+        var conn = mSysUIConnectionTracker.getActiveComponent().getValue();
+        if (conn == null) {
+            return;
+        }
+        var overviewCommandHelper = conn.getOverviewCommandHelper().getIfReady();
+        if (overviewCommandHelper == null) {
+            return;
+        }
+        final Display display = getDisplay();
+        final int displayId = display != null ? display.getDisplayId() : Display.DEFAULT_DISPLAY;
+        overviewCommandHelper.addCommand(OverviewCommandHelper.CommandType.TOGGLE, displayId);
+    }
 
     private final OverviewChangeListener mOverviewChangeListener = this::onOverviewTargetChanged;
 
@@ -818,7 +846,9 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         OverviewComponentObserver.INSTANCE.get(this)
                 .addOverviewChangeListener(mOverviewChangeListener);
         new TraceStateLoggerHelper(this).startTraceStateLogger();
-        registerReceiver(mAppOverlayReceiver, new IntentFilter(ACTION_APP_OVERLAY_VISIBLE),
+        final IntentFilter appOverlayFilter = new IntentFilter(ACTION_APP_OVERLAY_VISIBLE);
+        appOverlayFilter.addAction(ACTION_SHOW_RECENTS);
+        registerReceiver(mAppOverlayReceiver, appOverlayFilter,
                 Context.RECEIVER_NOT_EXPORTED);
     }
 
