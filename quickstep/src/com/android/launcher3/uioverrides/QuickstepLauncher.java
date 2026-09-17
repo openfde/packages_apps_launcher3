@@ -284,8 +284,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     private OverviewActionsView<?> mActionsView;
     private SysUIConnectionTracker mSysUIConnectionTracker;
     // Can be set from taskbar ui thread, read access has to follow below pattern
-    //   TaskbarInteractor it = mTaskbarInteractor;
-    //   if (ti != null) { ti.xxx(); }
+    //   TaskbarInteractor it = mTaskbarInteractor;    //   if (ti != null) { ti.xxx(); }
     private @Nullable volatile TaskbarInteractor mTaskbarInteractor;
     // Will be updated when dragging from taskbar.
     private @Nullable volatile UnfoldTransitionProgressProvider mUnfoldTransitionProgressProvider;
