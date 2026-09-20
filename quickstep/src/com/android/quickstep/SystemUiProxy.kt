@@ -1151,6 +1151,10 @@ constructor(
     fun createDesk(displayId: Int) =
         executeWithErrorLog({ "Failed call createDesk" }) { desktopMode?.createDesk(displayId) }
 
+    fun moveTaskToDesk(taskId: Int,deskId: Int) {
+        desktopMode?.moveTaskToDesk(taskId,deskId)
+    }
+
     /**
      * Calls shell to activate the desk whose ID is `deskId` on whatever display it exists on. This
      * will show all tasks on this desk and bring [taskIdToReorderToFront] to the front if it's

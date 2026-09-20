@@ -123,6 +123,7 @@ constructor(
         isSplitSelection: Boolean,
     ): SpringSet? {
         val isDismissingHomeTask = recentsView.homeTaskView === dismissedTaskView
+        Log.d(TAG, "bella_launcher createTaskDismissSpringAnimation: isDismissingHomeTask=" + isDismissingHomeTask);
         val gridEndData = getGridEndData(dismissedTaskView, isDismissingHomeTask)
         val dismissedTaskSecondaryDimension =
             if (dismissedTaskView == null)
@@ -965,6 +966,7 @@ constructor(
         gridEndData: GridEndData,
         isDismissingHomeTask: Boolean,
     ) {
+        Log.d(TAG, "bella_launcher onEndSnappingAndRelayout: shouldRemoveTask=" + shouldRemoveTask);
         with(recentsView) {
             if (pageCount == 0) {
                 return@with
@@ -1029,6 +1031,7 @@ constructor(
     private fun handleGroupTaskRemoval(dismissedTaskView: TaskView) {
         with(recentsView) {
             val groupTask = dismissedTaskView.groupTask ?: return
+            Log.d(TAG, "handleGroupTaskRemoval: groupTask=" + groupTask);
             if (dismissedTaskView.isRunningTask) {
                 finishRecentsAnimation(/* toHome */ true, /* shouldPip */ false) {
                     removeGroupTaskInternal(groupTask)

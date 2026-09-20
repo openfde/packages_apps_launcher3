@@ -56,9 +56,9 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     fun setUpIcon() {
         backgroundTintList = ColorStateList.valueOf(TRANSPARENT)
         val drawable = getTaskbarDividerIcon()
-        setPadding(taskbarIconViewPadding)
+        setPadding(2)
         setIconDrawable(drawable)
-        width = spaceNeeded
+        width = 12
         height = spaceNeeded
     }
 

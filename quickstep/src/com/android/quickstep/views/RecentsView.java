@@ -650,7 +650,7 @@ public abstract class RecentsView<
 
         @Override
         public void onTaskDisplayChanged(int taskId, int newDisplayId) {
-            Log.d(TAG, "onTaskDisplayChanged: " + taskId + ", new displayId = " + newDisplayId);
+            Log.d(TAG, "onTaskDisplayChanged --taskId: " + taskId + ", new displayId = " + newDisplayId);
             if (!mHandleTaskStackChanges) {
                 return;
             }
@@ -3423,7 +3423,7 @@ public abstract class RecentsView<
     }
 
     protected void removeGroupTaskInternal(@NonNull GroupTask groupTask) {
-        Log.d(TAG, "removeGroupTaskInternal: groupTask=" + groupTask);
+        Log.d(TAG, "bella_launcher removeGroupTaskInternal: groupTask=" + groupTask);
         UI_HELPER_EXECUTOR
                 .getHandler()
                 .post(
@@ -3532,6 +3532,7 @@ public abstract class RecentsView<
 
     /** Dismisses the entire [taskView]. */
     public void dismissTaskView(TaskView taskView, boolean removeTask) {
+        Log.d(TAG, "bella_launcher dismissTaskView: removeTask=" + removeTask);
         RecentsDismissUtils.SpringSet dismissSpringSet =
                 mDismissUtils.createTaskDismissSpringAnimation(taskView, removeTask,
                         false /* isSplitSelection */);
@@ -3555,6 +3556,7 @@ public abstract class RecentsView<
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        Log.d(TAG, "bella_launcher dispatchKeyEvent "+event.getKeyCode()  );
         if (isHandlingTouch() || event.getAction() != KeyEvent.ACTION_DOWN
                 || getStateManager().isInTransition()) {
             return super.dispatchKeyEvent(event);
@@ -3598,6 +3600,7 @@ public abstract class RecentsView<
     protected void onFocusChanged(boolean gainFocus, int direction,
             @Nullable Rect previouslyFocusedRect) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        Log.d(TAG, "bella_launcher onFocusChanged "+gainFocus  + ",direction "+direction );
         if (gainFocus && getChildCount() > 0) {
             switch (direction) {
                 case FOCUS_FORWARD:
@@ -4325,6 +4328,7 @@ public abstract class RecentsView<
     private void runExpressiveSplit(PendingAnimation builder, @Nullable TaskView taskView) {
         createInitialSplitSelectAnimation(builder);
         AtomicBoolean hasRunDismiss = new AtomicBoolean(false);
+        Log.d(TAG, "bella_launcher runExpressiveSplit: =" );
         builder.addOnFrameListener((animator) -> {
             SplitAnimationTimings splitTimings =
                     AnimUtils.getDeviceOverviewToSplitTimings(
@@ -5684,6 +5688,7 @@ public abstract class RecentsView<
 
     @Override
     public boolean scrollLeft() {
+        Log.d(TAG,"bella_launcher scrollLeft..... ");
         if (!showAsGrid()) {
             return super.scrollLeft();
         }
@@ -5716,6 +5721,7 @@ public abstract class RecentsView<
 
     @Override
     public boolean scrollRight() {
+        Log.d(TAG,"bella_launcher scrollRight..... ");
         if (!showAsGrid()) {
             return super.scrollRight();
         }
@@ -5788,6 +5794,7 @@ public abstract class RecentsView<
 
     @Override
     public void requestChildFocus(View child, View focused) {
+        Log.d(TAG,"bella_launcher requestChildFocus..... ");
         if (isKeyboardTaskFocusPendingForChild(child)) {
             updateGridProperties();
             updateScrollSynchronously();
@@ -5959,6 +5966,7 @@ public abstract class RecentsView<
             TaskView draggedTaskView, boolean isDismissing,
             RecentsDismissUtils.DismissedTaskData dismissedTaskData, boolean shouldRemoveTaskView,
             boolean isSplitSelection) {
+        Log.d(TAG, "bella_launcher runTaskDismissSettlingSpringAnimation: shouldRemoveTaskView ="+shouldRemoveTaskView + ",isSplitSelection "+isSplitSelection );
         RecentsDismissUtils.SpringSet dismissSpringSet =
                 mDismissUtils.createTaskDismissSpringAnimation(draggedTaskView, isDismissing,
                         dismissedTaskData, shouldRemoveTaskView, isSplitSelection);

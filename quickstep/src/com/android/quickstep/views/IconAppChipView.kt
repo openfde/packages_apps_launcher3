@@ -124,7 +124,7 @@ constructor(
     private var animator: AnimatorSet? = null
 
     private val multiValueAlpha: MultiValueAlpha =
-        MultiValueAlpha(this, Alpha.entries.size).apply { setUpdateVisibility(true) }
+        MultiValueAlpha(this, Alpha.entries.size).apply { setUpdateVisibility(false) }
     var contentAlpha by MultiPropertyDelegate(multiValueAlpha, Alpha.Content)
     var colorTintAlpha by MultiPropertyDelegate(multiValueAlpha, Alpha.ColorTint)
     var modalAlpha by MultiPropertyDelegate(multiValueAlpha, Alpha.Modal)
@@ -187,6 +187,7 @@ constructor(
 
     init {
         isHapticFeedbackEnabled = !Flags.msdlFeedback()
+        setVisibility(View.GONE);
     }
 
     private fun animateFocusBorder(isAppearing: Boolean) {

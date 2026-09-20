@@ -374,6 +374,7 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
         int taskbarLayout = isTransientTaskbar ? R.layout.transient_taskbar : R.layout.taskbar;
         mDragLayer = (TaskbarDragLayer) mLayoutInflater.inflate(taskbarLayout, null, false);
         TaskbarView taskbarView = mDragLayer.findViewById(R.id.taskbar_view);
+
         TaskbarScrimView taskbarScrimView = mDragLayer.findViewById(R.id.taskbar_scrim);
         NearestTouchFrame navButtonsView = mDragLayer.findViewById(R.id.navbuttons_view);
         navButtonsView.initialize(isPrimaryDisplay);
@@ -986,6 +987,13 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
     @Override
     public TaskbarDragLayer getDragLayer() {
         return mDragLayer;
+    }
+
+    /**
+     * Removes the default taskbar content so a plugin can replace it with its own view.
+     */
+    public void clearTaskbarContent() {
+        mDragLayer.removeAllViews();
     }
 
     @Override

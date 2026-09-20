@@ -42,7 +42,7 @@ import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.MultiPropertyFactory;
 import com.android.launcher3.util.MultiPropertyFactory.MultiProperty;
 import com.android.launcher3.views.BaseDragLayer;
-
+import android.util.Log;
 /**
  * Top-level ViewGroup that hosts the TaskbarView as well as Views created by it such as Folder.
  */
@@ -106,7 +106,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
 
     public void init(TaskbarDragLayerController.TaskbarDragLayerCallbacks callbacks) {
         mControllerCallbacks = callbacks;
-        mBackgroundRenderer.updateStashedHandleWidth(mContainer, getResources());
+        // mBackgroundRenderer.updateStashedHandleWidth(mContainer, getResources());
         recreateControllers();
     }
 
@@ -180,9 +180,10 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
         if (mContainer.isDestroyed()) return;
         float backgroundHeight = mControllerCallbacks.getTaskbarBackgroundHeight()
                 * Math.max(1f - mTaskbarBackgroundOffset, 0f);
-        mBackgroundRenderer.setBackgroundHeight(backgroundHeight);
-        mBackgroundRenderer.setBackgroundProgress(mTaskbarBackgroundProgress);
-        mBackgroundRenderer.draw(canvas);
+        Log.d("TaskbarDragLayer","dispatchDraw backgroundHeight "+backgroundHeight + ",mTaskbarBackgroundProgress "+mTaskbarBackgroundProgress);
+        // mBackgroundRenderer.setBackgroundHeight(backgroundHeight);
+        // mBackgroundRenderer.setBackgroundProgress(mTaskbarBackgroundProgress);
+        // mBackgroundRenderer.draw(canvas);
         super.dispatchDraw(canvas);
         mControllerCallbacks.drawDebugUi(canvas);
     }
@@ -192,7 +193,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      */
     public void setAnimatingTaskbarPinning(boolean animatingTaskbarPinning) {
         mIsAnimatingTaskbarPinning = animatingTaskbarPinning;
-        mBackgroundRenderer.setAnimatingPinning(mIsAnimatingTaskbarPinning);
+        // mBackgroundRenderer.setAnimatingPinning(mIsAnimatingTaskbarPinning);
     }
 
     protected MultiProperty getBackgroundRendererAlpha() {
@@ -226,7 +227,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      * @param cornerRoundness 0 has no round corner, 1 has complete round corner.
      */
     protected void setCornerRoundness(float cornerRoundness) {
-        mBackgroundRenderer.setCornerRoundness(cornerRoundness);
+        // mBackgroundRenderer.setCornerRoundness(cornerRoundness);
         invalidate();
     }
 
@@ -234,7 +235,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      * Sets the translation of the background during the swipe up gesture.
      */
     protected void setBackgroundTranslationYForSwipe(float translationY) {
-        mBackgroundRenderer.setTranslationYForSwipe(translationY);
+        // mBackgroundRenderer.setTranslationYForSwipe(translationY);
         invalidate();
     }
 
@@ -242,12 +243,12 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      * Sets the translation of the background during the spring on stash animation.
      */
     protected void setBackgroundTranslationYForStash(float translationY) {
-        mBackgroundRenderer.setTranslationYForStash(translationY);
+        // mBackgroundRenderer.setTranslationYForStash(translationY);
         invalidate();
     }
 
     protected void setBackgroundTranslationXForBubbleBar(float translationX) {
-        mBackgroundRenderer.setTranslationXForBubbleBar(translationX);
+        // mBackgroundRenderer.setTranslationXForBubbleBar(translationX);
         invalidate();
     }
 
@@ -285,14 +286,14 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      * Sets animation boolean when only animating persistent taskbar.
      */
     public void setIsAnimatingPersistentTaskbarBackground(boolean animatingPersistentTaskbarBg) {
-        mBackgroundRenderer.setAnimatingPersistentTaskbar(animatingPersistentTaskbarBg);
+        // mBackgroundRenderer.setAnimatingPersistentTaskbar(animatingPersistentTaskbarBg);
     }
 
     /**
      * Sets animation boolean when only animating transient taskbar.
      */
     public void setIsAnimatingTransientTaskbarBackground(boolean animatingTransientTaskbarBg) {
-        mBackgroundRenderer.setAnimatingTransientTaskbar(animatingTransientTaskbarBg);
+        // mBackgroundRenderer.setAnimatingTransientTaskbar(animatingTransientTaskbarBg);
     }
 
 
@@ -301,7 +302,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
      * the right.
      */
     public void setBackgroundHorizontalInsets(float insetPercentage) {
-        mBackgroundRenderer.setBackgroundHorizontalInsets(insetPercentage);
+        // mBackgroundRenderer.setBackgroundHorizontalInsets(insetPercentage);
         invalidate();
     }
 }

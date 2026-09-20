@@ -656,6 +656,7 @@ public final class TaskViewUtils {
 
         boolean skipLauncherChanges = !launcherClosing;
 
+        // 1. 寻找用户到底点击了哪个任务卡片
         TaskView taskView = findTaskViewToLaunch(recentsView, v,
                 AnimatedSurfaceUtils.mapFromTargets(appTargets));
         if (taskView == null) {
