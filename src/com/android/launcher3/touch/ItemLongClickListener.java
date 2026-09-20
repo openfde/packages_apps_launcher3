@@ -58,6 +58,20 @@ public class ItemLongClickListener {
         } else {
             TestLogging.recordEvent(TestProtocol.SEQUENCE_MAIN, "onWorkspaceItemLongClick");
         }
+        return startWorkspaceItemDrag(v, new DragOptions());
+    }
+
+    /**
+     * Starts a drag for the workspace item shown by {@code v}, if it is possible to drag it right
+     * now.
+     *
+     * <p>Unlike {@link #INSTANCE_WORKSPACE} this does not require a long press, so it can also be
+     * used to pick up an item as soon as the user moves the finger over it.
+     *
+     * @param dragOptions options for the drag
+     * @return true if the drag was started
+     */
+    public static boolean startWorkspaceItemDrag(View v, DragOptions dragOptions) {
         Launcher launcher = Launcher.getLauncher(v.getContext());
         if (!canStartDrag(launcher)) return false;
         if (!launcher.isInState(NORMAL)
@@ -68,7 +82,7 @@ public class ItemLongClickListener {
         if (!(v.getTag() instanceof ItemInfo)) return false;
 
         launcher.setWaitingForResult(null);
-        beginDrag(v, launcher, (ItemInfo) v.getTag(), new DragOptions());
+        beginDrag(v, launcher, (ItemInfo) v.getTag(), dragOptions);
         return true;
     }
 

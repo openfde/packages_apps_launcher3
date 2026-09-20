@@ -148,6 +148,7 @@ import com.android.launcher3.statemanager.StateManager.StateHandler;
 import com.android.launcher3.statemanager.StateManager.StateListener;
 import com.android.launcher3.states.StateAnimationConfig;
 import com.android.launcher3.testing.shared.ResourceUtils;
+import com.android.launcher3.touch.ItemLongClickListener;
 import com.android.launcher3.touch.WorkspaceTouchListener;
 import com.android.launcher3.util.EdgeEffectCompat;
 import com.android.launcher3.util.Executors;
@@ -302,6 +303,21 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private boolean mAddToExistingFolderOnDrop = false;
 
     private boolean mIsDownOverHorizontalScrollContent;
+
+    /**
+     * When true, an item can be picked up and moved as soon as the finger moves over it, instead
+     * of having to wait for a long press first.
+     */
+    private static final boolean ENABLE_INSTANT_ICON_DRAG = true;
+
+    /**
+     * The item below the initial touch down of the current gesture, when it can be picked up by
+     * moving the finger. Null when the gesture did not start on such an item.
+     */
+    @Nullable
+    private View mInstantDragTarget;
+    private float mInstantDragDownX;
+    private float mInstantDragDownY;
 
     final static float START_DAMPING_TOUCH_SLOP_ANGLE = (float) Math.PI / 6;
     final static float MAX_SWIPE_ANGLE = (float) Math.PI / 3;
@@ -1298,6 +1314,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         float y = ev.getY();
 
         mIsDownOverHorizontalScrollContent = false;
+        mInstantDragTarget = null;
         int childCount = getChildCount();
         if (childCount <= 0) return;
         int currentPage = getCurrentPage();
@@ -1323,10 +1340,62 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
 
         mIsDownOverHorizontalScrollContent =
                 (targetItem instanceof ScrollableContent sc) && sc.canScrollHorizontally();
+
+        if (canBePickedUpOnMove(targetItem)) {
+            mInstantDragTarget = targetItem;
+            mInstantDragDownX = x;
+            mInstantDragDownY = y;
+        }
+    }
+
+    /**
+     * Returns true if {@code v} is an item which can be picked up and moved without a long press.
+     *
+     * <p>Widgets are excluded, because they need the touch stream for scrolling and other
+     * interactions with their own content.
+     */
+    private static boolean canBePickedUpOnMove(@Nullable View v) {
+        if (!ENABLE_INSTANT_ICON_DRAG || v == null) return false;
+        if (v instanceof LauncherAppWidgetHostView) return false;
+        if (v.getId() == R.id.search_container_workspace) return false;
+        return v.getTag() instanceof ItemInfo;
+    }
+
+    /**
+     * Starts a drag of the item below the initial touch down, once the finger has moved far enough.
+     * This is what lets the user move an item directly, without waiting for a long press.
+     *
+     * @return true if a drag was started, in which case the workspace must not scroll.
+     */
+    private boolean maybeStartInstantItemDrag(MotionEvent ev) {
+        View target = mInstantDragTarget;
+        if (target == null || ev.getActionMasked() != MotionEvent.ACTION_MOVE) return false;
+
+        if (PointF.length(ev.getX() - mInstantDragDownX,
+                ev.getY() - mInstantDragDownY) <= mTouchSlop) {
+            return false;
+        }
+
+        // Only try to pick the item up once per gesture.
+        mInstantDragTarget = null;
+
+        DragOptions options = new DragOptions();
+        // The item is picked up by moving the finger, so the long press popup must not show up.
+        options.suppressPopup = true;
+        return ItemLongClickListener.startWorkspaceItemDrag(target, options);
+    }
+
+    @Override
+    protected void resetTouchState() {
+        mInstantDragTarget = null;
+        super.resetTouchState();
     }
 
     @Override
     protected void determineScrollingStart(MotionEvent ev) {
+        if (maybeStartInstantItemDrag(ev)) {
+            return;
+        }
         if (!isFinishedSwitchingState() || mIsDownOverHorizontalScrollContent) return;
 
         float deltaX = ev.getX() - getDownMotionX();
@@ -1923,7 +1992,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         if (child.getTag() instanceof ItemInfo item) {
             if (child instanceof BubbleTextView && !HomeScreenFilesUtilsKt.isFileSystemItem(item)) {
                 BubbleTextView btv = (BubbleTextView) child;
-                if (!dragOptions.isAccessibleDrag && !dragOptions.isMouseDrag) {
+                if (!dragOptions.isAccessibleDrag && !dragOptions.isMouseDrag
+                        && !dragOptions.suppressPopup) {
                     dragOptions.preDragCondition =
                             btv.startLongPressAction(mLauncher.getPopupControllerForAppIcons());
                 }
@@ -1932,7 +2002,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 }
             } else if (((Flags.homeScreenEditImprovements() && child instanceof Poppable)
                     || HomeScreenFilesUtilsKt.isFileSystemItem(item))
-                    && !dragOptions.isAccessibleDrag && !dragOptions.isMouseDrag) {
+                    && !dragOptions.isAccessibleDrag && !dragOptions.isMouseDrag
+                    && !dragOptions.suppressPopup) {
                 Popup popup = mLauncher.getPopupControllerForHomeScreenItems()
                         .show(child);
                 if (popup != null) {

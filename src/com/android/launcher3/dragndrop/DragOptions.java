@@ -38,6 +38,15 @@ public class DragOptions {
     public boolean isMouseDrag = false;
 
     /**
+     * Whether the long press popup menu should be suppressed when this drag starts.
+     *
+     * <p>Unlike {@link #isMouseDrag} this only controls the popup and has no effect on the rest
+     * of the drag behavior. It is used when the drag starts directly from a finger movement over
+     * an item, where showing the popup would get in the way of picking the item up.
+     */
+    public boolean suppressPopup = false;
+
+    /**
      * Specifies the start location for a simulated DnD (like system drag or accessibility drag),
      * null when using internal DnD
      */
