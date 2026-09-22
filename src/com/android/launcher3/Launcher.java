@@ -1488,29 +1488,29 @@ public class Launcher extends StatefulActivity<LauncherState>
      * @param focusSearch Indicates whether to make All Apps keyboard ready for search.
      */
     public void toggleAllApps(boolean focusSearch) {
-        toggleAllApps(/* alreadyOnHome= */ true, focusSearch);
+        // toggleAllApps(/* alreadyOnHome= */ true, focusSearch);
     }
 
     private void toggleAllApps(boolean alreadyOnHome, boolean focusSearch) {
-        if (getStateManager().isInStableState(ALL_APPS)) {
-            getStateManager().goToState(NORMAL, alreadyOnHome);
-        } else {
-            if (mWorkspace.isOverlayShown()) {
-                mOverlayManager.hideOverlay(/* animate */true);
-            }
-            AbstractFloatingView.closeAllOpenViews(this);
-            getStateManager().goToState(ALL_APPS, true /* animated */,
-                    new AnimationSuccessListener() {
-                        @Override
-                        public void onAnimationSuccess(Animator animator) {
-                            if (focusSearch
-                                    && mAppsView.getSearchUiManager().getEditText() != null) {
-                                mAppsView.getSearchUiManager().getEditText()
-                                    .requestFocusExplicitly();
-                            }
-                        }
-                    });
-        }
+        // if (getStateManager().isInStableState(ALL_APPS)) {
+        //     getStateManager().goToState(NORMAL, alreadyOnHome);
+        // } else {
+        //     if (mWorkspace.isOverlayShown()) {
+        //         mOverlayManager.hideOverlay(/* animate */true);
+        //     }
+        //     AbstractFloatingView.closeAllOpenViews(this);
+        //     getStateManager().goToState(ALL_APPS, true /* animated */,
+        //             new AnimationSuccessListener() {
+        //                 @Override
+        //                 public void onAnimationSuccess(Animator animator) {
+        //                     if (focusSearch
+        //                             && mAppsView.getSearchUiManager().getEditText() != null) {
+        //                         mAppsView.getSearchUiManager().getEditText()
+        //                             .requestFocusExplicitly();
+        //                     }
+        //                 }
+        //             });
+        // }
     }
 
     protected void showAllAppsFromIntent(boolean alreadyOnHome) {
