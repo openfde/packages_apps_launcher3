@@ -166,6 +166,8 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
 
         if (action == ACTION_UP || action == ACTION_POINTER_UP) {
             if (!mWorkspace.isHandlingTouch()) {
+                // Tapping the empty space of the home screen clears the item selection.
+                mWorkspace.clearItemSelection();
                 final CellLayout currentPage =
                         (CellLayout) mWorkspace.getChildAt(mWorkspace.getCurrentPage());
                 if (currentPage != null) {

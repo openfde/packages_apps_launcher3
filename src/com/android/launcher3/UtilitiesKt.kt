@@ -23,6 +23,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewParent
 import androidx.core.graphics.ColorUtils
+import com.android.launcher3.apppairs.AppPairIcon
+import com.android.launcher3.folder.FolderIcon
 import com.android.launcher3.model.data.ItemInfo
 
 object UtilitiesKt {
@@ -170,9 +172,16 @@ object UtilitiesKt {
      */
     @JvmStatic fun ItemInfo.isPersistedModelItem() = id > ItemInfo.NO_ID && (id ushr 24) == 0
 
+    /** Extra space left between the item content and its selection highlight, in dp. */
+    private const val HIGHLIGHT_PADDING_DP = 8f
+
+    /** Corner radius of the selection highlight, in px. */
+    private const val HIGHLIGHT_CORNER_RADIUS = 8f
+
     /**
      * Draws a highlight around a workspace item view to indicate selection. This includes a
-     * semi-transparent filled rounded rectangle and a more opaque outline.
+     * semi-transparent filled rounded rectangle and a more opaque outline. The highlight is drawn
+     * around the content of the item, so that the item appears centered inside it.
      *
      * @param canvas The canvas to draw on.
      * @param view The workspace item view to highlight.
@@ -188,8 +197,24 @@ object UtilitiesKt {
                 isAntiAlias = true
             }
 
-        val backgroundRect = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
-        canvas.drawRoundRect(backgroundRect, 20f, 20f, backgroundPaint)
+        // Highlight only the content of the item (the icon and its label) so that the item appears
+        // centered inside the highlight, instead of using the whole cell sized view.
+        val backgroundRect =
+            when (view) {
+                is BubbleTextView -> view.selectionHighlightBounds
+                is FolderIcon -> view.selectionHighlightBounds
+                is AppPairIcon -> view.selectionHighlightBounds
+                else -> RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
+            }
+        val padding = HIGHLIGHT_PADDING_DP * view.resources.displayMetrics.density
+        backgroundRect.inset(-padding, -padding)
+
+        canvas.drawRoundRect(
+            backgroundRect,
+            HIGHLIGHT_CORNER_RADIUS,
+            HIGHLIGHT_CORNER_RADIUS,
+            backgroundPaint,
+        )
 
         val outlinePaint =
             Paint().apply {
@@ -198,6 +223,11 @@ object UtilitiesKt {
                 strokeWidth = 2f
                 isAntiAlias = true
             }
-        canvas.drawRoundRect(backgroundRect, 20f, 20f, outlinePaint)
+        canvas.drawRoundRect(
+            backgroundRect,
+            HIGHLIGHT_CORNER_RADIUS,
+            HIGHLIGHT_CORNER_RADIUS,
+            outlinePaint,
+        )
     }
 }

@@ -19,6 +19,7 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.FloatProperty
 import android.view.LayoutInflater
@@ -48,6 +49,8 @@ import com.android.launcher3.util.MultiTranslateDelegate
 import com.android.launcher3.views.ActivityContext
 import java.util.function.Predicate
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * A [android.widget.FrameLayout] used to represent an app pair icon on the workspace. <br></br> The
@@ -198,6 +201,25 @@ class AppPairIcon :
         }
         super.dispatchDraw(canvas)
     }
+
+    /**
+     * Bounds, relative to this view, of the app pair graphic and its label. Used to draw the
+     * selection highlight tightly around the item, instead of around the whole (cell sized) view.
+     */
+    val selectionHighlightBounds: RectF
+        get() {
+            val bounds =
+                RectF(
+                    iconDrawableArea.left.toFloat(),
+                    iconDrawableArea.top.toFloat(),
+                    iconDrawableArea.right.toFloat(),
+                    iconDrawableArea.bottom.toFloat(),
+                )
+            bounds.left = min(bounds.left, titleTextView.left.toFloat())
+            bounds.right = max(bounds.right, titleTextView.right.toFloat())
+            bounds.bottom = max(bounds.bottom, titleTextView.bottom.toFloat())
+            return bounds
+        }
 
     /**
      * Inside folders, icons are vertically centered in their rows. See [BubbleTextView] for

@@ -55,6 +55,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.text.MessageFormat;
+import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.StaticLayout;
@@ -1068,6 +1069,31 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         } else {
             outBounds.offset((getWidth() - iconSize) / 2, getPaddingTop());
         }
+    }
+
+    /**
+     * Returns the bounds, relative to this view, of the icon and the label of this item. Used to
+     * draw the selection highlight tightly around the item, instead of around the whole (cell
+     * sized) view.
+     */
+    public RectF getSelectionHighlightBounds() {
+        if (mLayoutHorizontal) {
+            return new RectF(0, 0, getWidth(), getHeight());
+        }
+        Rect iconBounds = new Rect();
+        getIconBounds(iconBounds);
+        RectF bounds = new RectF(iconBounds);
+        Layout layout = getLayout();
+        if (layout == null || layout.getWidth() <= 0) {
+            return bounds;
+        }
+        // The label is centered below the icon.
+        float centerX = getWidth() / 2f;
+        float halfLabelWidth = layout.getWidth() / 2f;
+        bounds.left = Math.min(bounds.left, centerX - halfLabelWidth);
+        bounds.right = Math.max(bounds.right, centerX + halfLabelWidth);
+        bounds.bottom = iconBounds.bottom + getCompoundDrawablePadding() + layout.getHeight();
+        return bounds;
     }
 
     /**

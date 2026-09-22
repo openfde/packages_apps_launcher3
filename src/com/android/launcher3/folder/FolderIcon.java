@@ -33,6 +33,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.util.Property;
@@ -260,6 +261,27 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     public BubbleTextView getFolderName() {
         return mFolderName;
+    }
+
+    /**
+     * Returns the bounds, relative to this view, of the folder icon and its label. Used to draw the
+     * selection highlight tightly around the item, instead of around the whole (cell sized) view.
+     */
+    public RectF getSelectionHighlightBounds() {
+        Rect iconBounds = new Rect();
+        if (mBackground != null) {
+            mBackground.getBounds(iconBounds);
+        }
+        if (iconBounds.isEmpty()) {
+            return new RectF(0, 0, getWidth(), getHeight());
+        }
+        RectF bounds = new RectF(iconBounds);
+        if (mFolderName != null) {
+            bounds.left = Math.min(bounds.left, mFolderName.getLeft());
+            bounds.right = Math.max(bounds.right, mFolderName.getRight());
+            bounds.bottom = Math.max(bounds.bottom, mFolderName.getBottom());
+        }
+        return bounds;
     }
 
     public void getPreviewBounds(Rect outBounds) {

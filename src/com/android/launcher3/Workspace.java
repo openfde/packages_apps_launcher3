@@ -1758,6 +1758,17 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         }
     }
 
+    /**
+     * Clears the selection of all the items on the home screen.
+     */
+    public void clearItemSelection() {
+        mLauncher.getWorkspaceItemClickHandler().cancelPendingSelection();
+        mapOverItems((info, view) -> {
+            view.setSelected(false);
+            return false;
+        });
+    }
+
     public void onWallpaperTap(MotionEvent ev) {
         final int[] position = mTempXY;
         getLocationOnScreen(position);
@@ -1862,6 +1873,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
 
     public void startDrag(CellInfo cellInfo, DragOptions options) {
         View child = cellInfo.cell;
+
+        // An item which is picked up is being moved, so it must not stay selected.
+        child.setSelected(false);
 
         mDragInfo = cellInfo;
         child.setVisibility(INVISIBLE);

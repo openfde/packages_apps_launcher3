@@ -207,6 +207,7 @@ import com.android.launcher3.touch.AllAppsSwipeController;
 import com.android.launcher3.touch.CustomActionsListener;
 import com.android.launcher3.touch.ItemClickHandler;
 import com.android.launcher3.touch.ItemLongClickListener;
+import com.android.launcher3.touch.WorkspaceItemClickHandler;
 import com.android.launcher3.util.ActivityResultInfo;
 import com.android.launcher3.util.BackPressHandler;
 import com.android.launcher3.util.CannedAnimationCoordinator;
@@ -317,6 +318,9 @@ public class Launcher extends StatefulActivity<LauncherState>
     private LauncherWidgetHolder mAppWidgetHolder;
     private WidgetVisibilityTracker mWidgetVisibilityTracker;
     private ItemInflater<Launcher> mItemInflater;
+
+    private final WorkspaceItemClickHandler mWorkspaceItemClickHandler =
+            new WorkspaceItemClickHandler(ItemClickHandler.INSTANCE);
 
     private final int[] mTmpAddItemCellCoordinates = new int[2];
 
@@ -2867,7 +2871,14 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     @Override
     public OnClickListener getItemOnClickListener() {
-        return ItemClickHandler.INSTANCE;
+        return mWorkspaceItemClickHandler;
+    }
+
+    /**
+     * Returns the click handler used for the items placed on the home screen.
+     */
+    public WorkspaceItemClickHandler getWorkspaceItemClickHandler() {
+        return mWorkspaceItemClickHandler;
     }
 
     @Override
