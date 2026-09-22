@@ -54,22 +54,22 @@ public class KeyboardShortcutsDelegate {
      */
     public void onProvideKeyboardShortcuts(
             List<KeyboardShortcutGroup> data, Menu menu, int deviceId) {
-        ArrayList<KeyboardShortcutInfo> shortcutInfos = new ArrayList<>();
-        if (mLauncher.isInState(NORMAL)) {
-            shortcutInfos.add(
-                    new KeyboardShortcutInfo(mLauncher.getString(R.string.all_apps_button_label),
-                            KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON));
-            shortcutInfos.add(
-                    new KeyboardShortcutInfo(mLauncher.getString(R.string.widget_button_text),
-                            KeyEvent.KEYCODE_W, KeyEvent.META_CTRL_ON));
-        }
-        getSupportedActions(mLauncher, mLauncher.getCurrentFocus()).forEach(la ->
-                shortcutInfos.add(new KeyboardShortcutInfo(
-                        la.accessibilityAction.getLabel(), la.keyCode, KeyEvent.META_CTRL_ON)));
-        if (!shortcutInfos.isEmpty()) {
-            data.add(new KeyboardShortcutGroup(mLauncher.getString(R.string.home_screen),
-                    shortcutInfos));
-        }
+        // ArrayList<KeyboardShortcutInfo> shortcutInfos = new ArrayList<>();
+        // if (mLauncher.isInState(NORMAL)) {
+        //     shortcutInfos.add(
+        //             new KeyboardShortcutInfo(mLauncher.getString(R.string.all_apps_button_label),
+        //                     KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON));
+        //     shortcutInfos.add(
+        //             new KeyboardShortcutInfo(mLauncher.getString(R.string.widget_button_text),
+        //                     KeyEvent.KEYCODE_W, KeyEvent.META_CTRL_ON));
+        // }
+        // getSupportedActions(mLauncher, mLauncher.getCurrentFocus()).forEach(la ->
+        //         shortcutInfos.add(new KeyboardShortcutInfo(
+        //                 la.accessibilityAction.getLabel(), la.keyCode, KeyEvent.META_CTRL_ON)));
+        // if (!shortcutInfos.isEmpty()) {
+        //     data.add(new KeyboardShortcutGroup(mLauncher.getString(R.string.home_screen),
+        //             shortcutInfos));
+        // }
     }
 
     /**
@@ -83,7 +83,7 @@ public class KeyboardShortcutsDelegate {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_A:
                     if (mLauncher.isInState(NORMAL)) {
-                        mLauncher.getStateManager().goToState(ALL_APPS);
+                        // mLauncher.getStateManager().goToState(ALL_APPS);
                         return true;
                     }
                     break;

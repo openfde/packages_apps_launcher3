@@ -186,74 +186,74 @@ public final class TaskbarAllAppsController {
      * @param showKeyboard whether to show the keyboard when all apps is open
      */
     public void show(boolean animate, boolean showKeyboard) {
-        if (mAppsView != null) {
-            return;
-        }
-        // Explicitly close the keyboard quick switch view to prevent it showing below the All
-        // apps view.
-        mControllers.keyboardQuickSwitchController.closeQuickSwitchView();
-        mOverlayContext = mControllers.taskbarOverlayController.requestWindow();
+        // if (mAppsView != null) {
+        //     return;
+        // }
+        // // Explicitly close the keyboard quick switch view to prevent it showing below the All
+        // // apps view.
+        // mControllers.keyboardQuickSwitchController.closeQuickSwitchView();
+        // mOverlayContext = mControllers.taskbarOverlayController.requestWindow();
 
-        // Initialize search session for All Apps.
-        mSearchSessionController = TaskbarSearchSessionController.newInstance(mOverlayContext);
-        mOverlayContext.setSearchSessionController(mSearchSessionController);
-        mSearchSessionController.setZeroStatePredictedItems(mPredictedApps);
-        if (mZeroStateSearchSuggestions != null) {
-            mSearchSessionController.setZeroStateSearchSuggestions(mZeroStateSearchSuggestions);
-        }
-        mSearchSessionController.startLifecycle();
+        // // Initialize search session for All Apps.
+        // mSearchSessionController = TaskbarSearchSessionController.newInstance(mOverlayContext);
+        // mOverlayContext.setSearchSessionController(mSearchSessionController);
+        // mSearchSessionController.setZeroStatePredictedItems(mPredictedApps);
+        // if (mZeroStateSearchSuggestions != null) {
+        //     mSearchSessionController.setZeroStateSearchSuggestions(mZeroStateSearchSuggestions);
+        // }
+        // mSearchSessionController.startLifecycle();
 
-        mSlideInView = (TaskbarAllAppsSlideInView) mOverlayContext.getLayoutInflater().inflate(
-                R.layout.taskbar_all_apps_sheet, mOverlayContext.getDragLayer(), false);
+        // mSlideInView = (TaskbarAllAppsSlideInView) mOverlayContext.getLayoutInflater().inflate(
+        //         R.layout.taskbar_all_apps_sheet, mOverlayContext.getDragLayer(), false);
 
-        if (!mOverlayContext.isPrimaryDisplay()
-                && enableCustomHeightForAllAppsOnCd.isTrue()) {
-            // Not doing these calculations in init because the device properties may change, for
-            // example if there's a display size setting change.
-            DeviceProfile dp = mOverlayContext.getDeviceProfile();
-            int maxAllAppsHeight = (int) Math.ceil(mTaskbarAllAppsConnectedDisplayCustomHeightLimit
-                    * dp.getDeviceProperties().getAvailableHeightPx());
-            int allAppsHeight = (int) Math.ceil(dp.getAllAppsProfile().getCellHeightPx()
-                    * mTaskbarAllAppsConnectedDisplayCustomHeightMultiple
-                    * dp.getAllAppsProfile().getNumShownAllAppsColumns());
+        // if (!mOverlayContext.isPrimaryDisplay()
+        //         && enableCustomHeightForAllAppsOnCd.isTrue()) {
+        //     // Not doing these calculations in init because the device properties may change, for
+        //     // example if there's a display size setting change.
+        //     DeviceProfile dp = mOverlayContext.getDeviceProfile();
+        //     int maxAllAppsHeight = (int) Math.ceil(mTaskbarAllAppsConnectedDisplayCustomHeightLimit
+        //             * dp.getDeviceProperties().getAvailableHeightPx());
+        //     int allAppsHeight = (int) Math.ceil(dp.getAllAppsProfile().getCellHeightPx()
+        //             * mTaskbarAllAppsConnectedDisplayCustomHeightMultiple
+        //             * dp.getAllAppsProfile().getNumShownAllAppsColumns());
 
-            // If the desired height of all apps is greater than the limit then continue with
-            // fullscreen all apps.
-            if (allAppsHeight <= maxAllAppsHeight) {
-                BaseDragLayer.LayoutParams lp =
-                        (BaseDragLayer.LayoutParams) mSlideInView.getLayoutParams();
-                Rect padding = dp.getAllAppsProfile().getPadding();
-                lp.height = allAppsHeight + padding.top + padding.bottom;
-                lp.gravity = Gravity.BOTTOM;
-            }
-        }
+        //     // If the desired height of all apps is greater than the limit then continue with
+        //     // fullscreen all apps.
+        //     if (allAppsHeight <= maxAllAppsHeight) {
+        //         BaseDragLayer.LayoutParams lp =
+        //                 (BaseDragLayer.LayoutParams) mSlideInView.getLayoutParams();
+        //         Rect padding = dp.getAllAppsProfile().getPadding();
+        //         lp.height = allAppsHeight + padding.top + padding.bottom;
+        //         lp.gravity = Gravity.BOTTOM;
+        //     }
+        // }
 
-        // Ensures All Apps gets touch events in case it is not the top floating view. Floating
-        // views above it may not be able to intercept the touch, so All Apps should try to.
-        mOverlayContext.getDragLayer().addTouchController(mSlideInView);
-        mSlideInView.addOnCloseListener(this::cleanUpOverlay);
-        TaskbarAllAppsViewController viewController = new TaskbarAllAppsViewController(
-                mOverlayContext,
-                mTaskbarUiState,
-                mSlideInView,
-                mControllers,
-                mSearchSessionController,
-                showKeyboard);
+        // // Ensures All Apps gets touch events in case it is not the top floating view. Floating
+        // // views above it may not be able to intercept the touch, so All Apps should try to.
+        // mOverlayContext.getDragLayer().addTouchController(mSlideInView);
+        // mSlideInView.addOnCloseListener(this::cleanUpOverlay);
+        // TaskbarAllAppsViewController viewController = new TaskbarAllAppsViewController(
+        //         mOverlayContext,
+        //         mTaskbarUiState,
+        //         mSlideInView,
+        //         mControllers,
+        //         mSearchSessionController,
+        //         showKeyboard);
 
-        viewController.show(animate);
-        mAppsView = mOverlayContext.getAppsView();
-        if (!LauncherModel.useModelRepositoryBinding()) {
-            mAppsView.getAppsStore().setApps(mApps, mAppsModelFlags, mPackageUserKeytoUidMap);
-        }
-        mAppsView.getFloatingHeaderView()
-                .findFixedRowByType(PredictionRowView.class)
-                .setPredictedApps(mPredictedApps);
-        // 1 alternative that would be more work:
-        // Create a shared drag layer between taskbar and taskbarAllApps so that when dragging
-        // starts and taskbarAllApps can close, but the drag layer that the view is being dragged in
-        // doesn't also close
-        mOverlayContext.getDragController().setDisallowGlobalDrag(mDisallowGlobalDrag);
-        mOverlayContext.getDragController().setDisallowLongClick(mDisallowLongClick);
+        // viewController.show(animate);
+        // mAppsView = mOverlayContext.getAppsView();
+        // if (!LauncherModel.useModelRepositoryBinding()) {
+        //     mAppsView.getAppsStore().setApps(mApps, mAppsModelFlags, mPackageUserKeytoUidMap);
+        // }
+        // mAppsView.getFloatingHeaderView()
+        //         .findFixedRowByType(PredictionRowView.class)
+        //         .setPredictedApps(mPredictedApps);
+        // // 1 alternative that would be more work:
+        // // Create a shared drag layer between taskbar and taskbarAllApps so that when dragging
+        // // starts and taskbarAllApps can close, but the drag layer that the view is being dragged in
+        // // doesn't also close
+        // mOverlayContext.getDragController().setDisallowGlobalDrag(mDisallowGlobalDrag);
+        // mOverlayContext.getDragController().setDisallowLongClick(mDisallowLongClick);
     }
 
     private void cleanUpOverlay() {

@@ -1417,6 +1417,7 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     @Override
     protected void onNewIntent(Intent intent) {
+         Log.d(TAG, "Launcher.onNewIntent: " + intent);
         if (Utilities.isRunningInTestHarness()) {
             Log.d(TestProtocol.PERMANENT_DIAG_TAG, "Launcher.onNewIntent: " + intent);
         }
@@ -1466,7 +1467,7 @@ public class Launcher extends StatefulActivity<LauncherState>
         } else if (Intent.ACTION_ALL_APPS.equals(intent.getAction())) {
             showAllAppsFromIntent(alreadyOnHome);
         } else if (INTENT_ACTION_ALL_APPS_TOGGLE.equals(intent.getAction())) {
-            // toggleAllApps(alreadyOnHome, true);
+            toggleAllApps(alreadyOnHome, true);
         } else if (Intent.ACTION_SHOW_WORK_APPS.equals(intent.getAction())) {
             showAllAppsWithSelectedTabFromIntent(alreadyOnHome,
                     ActivityAllAppsContainerView.AdapterHolder.WORK);
@@ -1488,7 +1489,7 @@ public class Launcher extends StatefulActivity<LauncherState>
      * @param focusSearch Indicates whether to make All Apps keyboard ready for search.
      */
     public void toggleAllApps(boolean focusSearch) {
-        // toggleAllApps(/* alreadyOnHome= */ true, focusSearch);
+        toggleAllApps(/* alreadyOnHome= */ true, focusSearch);
     }
 
     private void toggleAllApps(boolean alreadyOnHome, boolean focusSearch) {
