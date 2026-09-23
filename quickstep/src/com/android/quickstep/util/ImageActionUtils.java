@@ -63,7 +63,7 @@ import java.util.function.Supplier;
  */
 public class ImageActionUtils {
 
-    private static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".overview.fileprovider";
+    public static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".overview.fileprovider";
     private static final long FILE_LIFE = 1000L /*ms*/ * 60L /*s*/ * 60L /*m*/ * 24L /*h*/;
     private static final String SUB_FOLDER = "Overview";
     private static final String BASE_NAME = "overview_image_";

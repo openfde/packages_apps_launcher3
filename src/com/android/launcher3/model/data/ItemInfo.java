@@ -170,6 +170,9 @@ public class ItemInfo {
     @Nullable
     public CharSequence title;
 
+
+    public String appWidgetProvider;
+
     /**
      * Optionally set: The appTitle might e.g. be different if {@code title} is used to
      * display progress (e.g. Downloading..).
@@ -188,7 +191,7 @@ public class ItemInfo {
      * original {@link ComponentName}.
      */
     @Nullable
-    private ComponentName mComponentName;
+    public ComponentName mComponentName;
 
     @NonNull
     public UserHandle user;
@@ -236,6 +239,10 @@ public class ItemInfo {
     @Nullable
     public Intent getIntent() {
         return null;
+    }
+
+    public String getTitle(){
+        return title.toString();
     }
 
     /**

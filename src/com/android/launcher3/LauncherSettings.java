@@ -172,6 +172,14 @@ public class LauncherSettings {
          */
         public static final int ITEM_TYPE_SYSTEM_DRAG = 15;
 
+        public static final int ITEM_TYPE_DIRECTORY = 18;
+
+        public static final int ITEM_TYPE_DOCUMENT = 19;
+
+        public static final int ITEM_TYPE_LINUX_APP = 20;
+
+        public static final int ITEM_TYPE_ANDROID_APP = 21;//android desktop生成的图标
+
         /**
          * The custom icon bitmap.
          * <P>Type: BLOB</P>

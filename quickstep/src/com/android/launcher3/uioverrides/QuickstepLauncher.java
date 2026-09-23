@@ -259,6 +259,11 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import com.android.launcher3.model.data.MessageEvent;
+
+
 public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         SystemShortcut.BubbleActivityStarter {
     private static final boolean TRACE_LAYOUTS =
@@ -1769,5 +1774,10 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     @Override
     public boolean isOnBackInvokedCallbackEnabled() {
         return getApplicationInfo().isOnBackInvokedCallbackEnabled();
+    }
+
+    @Subscribe
+    public void onMessageEvent(MessageEvent event) {
+
     }
 }

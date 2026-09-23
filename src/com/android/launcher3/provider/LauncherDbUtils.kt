@@ -263,6 +263,10 @@ object LauncherDbUtils {
                 /* selection */ "itemType = ? OR itemType = ?",
                 /* selectionArgs */ arrayOf(
                     ITEM_TYPE_APPLICATION.toString(),
+                    Favorites.ITEM_TYPE_DIRECTORY.toString(),
+                    Favorites.ITEM_TYPE_DOCUMENT.toString(),
+                    Favorites.ITEM_TYPE_LINUX_APP.toString(),
+                    Favorites.ITEM_TYPE_ANDROID_APP.toString(),
                     ITEM_TYPE_DEEP_SHORTCUT.toString(),
                 ),
                 null,

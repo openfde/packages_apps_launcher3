@@ -270,7 +270,7 @@ java_library {
 
     static_libs: ["PluginCoreLib"],
 
-    srcs: ["src_plugins/**/*.java"],
+     srcs: ["src_plugins/**/*.java","src/**/*.aidl"],
 
     sdk_version: "current",
     min_sdk_version: min_launcher3_sdk_version,
@@ -326,6 +326,7 @@ android_library {
         "androidx.compose.ui_ui-tooling",
         "androidx.navigation_navigation-compose",
         "cuebarlib",
+        "eventbus"
     ],
     manifest: "AndroidManifest-common.xml",
     sdk_version: "current",

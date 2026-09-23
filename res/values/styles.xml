@@ -579,4 +579,36 @@
         <item name="android:windowAnimationStyle">@android:style/Animation</item>
         <item name="android:windowShowWallpaper">false</item>
     </style>
+
+
+        <declare-styleable name="SVGImageView">
+        <!-- Location of the SVG document. -->
+        <attr name="svg" format="reference|string"/>
+        <attr name="css" format="string"/>
+    </declare-styleable>
+
+    
+    <style name="popWindowTextStyle" >
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">#e6000000</item>
+        <item name="android:gravity">left|center</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">@color/text_hover_selector</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:paddingLeft">14dp</item>
+    </style>
+
+    <style name="popWindowLineStyle" >
+        <item name="android:background">#1a000000</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_width">130dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:layout_marginHorizontal">15dp</item>
+    </style>
+
+    <style name="RoundedAlertDialog"  parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="dialogCornerRadius">8dp</item>
+        <item name="colorAccent">#318BF3</item>
+        <item name="android:background">#F9FAFC</item>
+    </style>
 </resources>

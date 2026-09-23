@@ -119,6 +119,10 @@ class WorkspaceItemProcessor(
         try {
             when (c.itemType) {
                 Favorites.ITEM_TYPE_APPLICATION,
+                Favorites.ITEM_TYPE_DIRECTORY,
+                Favorites.ITEM_TYPE_DOCUMENT,
+                Favorites.ITEM_TYPE_LINUX_APP,
+                Favorites.ITEM_TYPE_ANDROID_APP,
                 Favorites.ITEM_TYPE_DEEP_SHORTCUT -> processAppOrDeepShortcut()
                 Favorites.ITEM_TYPE_FOLDER,
                 Favorites.ITEM_TYPE_APP_GROUP -> processFolderOrAppPair()

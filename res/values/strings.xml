@@ -708,4 +708,55 @@
     <string name="folder_creator_add" translatable="false">Add</string>
     <string name="folder_creator_cancel" translatable="false">Cancel</string>
 
+
+    <string name="app_open_type" >"open type"</string>
+    <string name="copy_drop_target">"Copy"</string>
+    <string name="cut_drop_target">"Cut"</string>
+    <string name="rename_drop_target">"Rename"</string>
+    <string name="remove_drop_target">removte</string>
+    <string name="delete_drop_target">"delete"</string>
+
+    <string name="desktop_icon_rearray">Icon Rearry</string>
+    <string name="desktop_new">"New"</string>
+    <string name="desktop_new_document">"New document"</string>
+    <string name="desktop_new_directory">"New directory"</string>
+    <string name="desktop_new_paste">"paste"</string>
+    <string name="desktop_tips">"Tips"</string>
+    <string name="app_not_install">"App not installed. Remove this icon? "</string>
+    <string name="desktop_delete_tips">"is delete?"</string>
+    <string name="desktop_delete">"delete"</string>
+    <string name="desktop_cancel">"cancel"</string>
+    <string name="desktop_ok">"OK"</string>
+    <string name="desktop_rename">"Rename"</string>
+    
+    <string name="change_wallpaper">"Change Wallpaper"</string>
+    <string name="display_properties">"Display Properties"</string>
+    <string name="display_settings">"Display Settings"</string>
+    <string name="system_theme">"System Theme"</string>
+    <string name="view_type">"View Type"</string>
+    <string name="refresh">"Refresh"</string>
+    <string name="sort">"Sort Order"</string>
+    <string name="open_the_terminal">"Open The Terminal"</string>
+    <string name="theme_dark">"Dark"</string>
+    <string name="theme_light">"Light"</string>
+    <string name="sort_by_name">"Arrange by Name"</string>
+    <string name="sort_by_type">"Arrange by Type"</string>
+    <string name="download_package_name">"com.tencent.android.qqdownloader"</string>
+    <string name="download_name">"应用宝"</string>
+
+    <string-array name="theme_options">
+        <item>Dark</item>
+        <item>Light</item>
+    </string-array>
+
+    <string-array name="sort_options">
+        <item>Name</item>
+        <item>Type</item>
+        <item>Time</item>
+    </string-array>
+
+     <string-array name="file_options">
+        <item>Directory</item>
+        <item>Document</item>
+    </string-array>
 </resources>

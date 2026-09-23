@@ -117,6 +117,50 @@ constructor(
         LAUNCHER_SETTINGS_BUTTON_TAP_OR_LONGPRESS(463),
         @UiEvent(doc = "User tapped or long pressed on apps icon inside launcher settings.")
         LAUNCHER_ALL_APPS_TAP_OR_LONGPRESS(2204),
+        @UiEvent(doc = "User rearray icon.(rearray).")
+        LAUNCHER_DESKTOP_ICON_TAP_REARRAY(1368),
+
+        @UiEvent(doc = "User new dir")
+        LAUNCHER_DESKTOP_ICON_TAP_NEW_DIR(1369),
+
+        @UiEvent(doc = "User new doc")
+        LAUNCHER_DESKTOP_ICON_TAP_NEW_DOC(1370),
+
+        @UiEvent(doc = "User new paste")
+        LAUNCHER_DESKTOP_ICON_TAP_NEW_PASTE(1371),
+
+        @UiEvent(doc = "Change Wallpaper")
+        LAUNCHER_DESKTOP_ICON_TAP_CHANGE_WALLPAPER(2000),
+
+        @UiEvent(doc = "Display Properties")
+        LAUNCHER_DESKTOP_ICON_TAP_DISPLAY_PROPERTIES(2010),
+
+        @UiEvent(doc = "Display Settings")
+        LAUNCHER_DESKTOP_ICON_TAP_DISPLAY_SETTINGS(2020),
+
+        @UiEvent(doc = "System Theme")
+        LAUNCHER_DESKTOP_ICON_TAP_SYSTEM_THEME(2030),
+
+        @UiEvent(doc = "System Theme Dark")
+        LAUNCHER_DESKTOP_ICON_TAP_SYSTEM_THEME_DARK(2031),
+
+        @UiEvent(doc = "System Theme Light")
+        LAUNCHER_DESKTOP_ICON_TAP_SYSTEM_THEME_LIGHT(2032),
+
+        @UiEvent(doc = "View Type")
+        LAUNCHER_DESKTOP_ICON_TAP_VIEW_TYPE(2040),
+
+        @UiEvent(doc = "sort")
+        LAUNCHER_DESKTOP_ICON_TAP_SORT(2050),
+
+        @UiEvent(doc = "sort by name")
+        LAUNCHER_DESKTOP_ICON_TAP_SORT_NAME(2051),
+
+        @UiEvent(doc = "sort by tpye")
+        LAUNCHER_DESKTOP_ICON_TAP_SORT_TYPE(2052),
+
+        @UiEvent(doc = "open the terminal")
+        LAUNCHER_DESKTOP_ICON_TAP_OPEN_THE_TERMINAL(2060),
         @UiEvent(doc = "User tapped or long pressed on widget tray icon inside launcher settings.")
         LAUNCHER_WIDGETSTRAY_BUTTON_TAP_OR_LONGPRESS(464),
         @UiEvent(doc = "User expanded the list of widgets for a single app in the widget picker.")

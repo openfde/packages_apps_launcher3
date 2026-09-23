@@ -31,6 +31,7 @@ import com.android.launcher3.Flags
 import com.android.launcher3.InvariantDeviceProfile
 import com.android.launcher3.LauncherModel
 import com.android.launcher3.LauncherPrefs
+import com.android.launcher3.LauncherSettings.Favorites
 import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_DESKTOP
 import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_HOTSEAT
 import com.android.launcher3.LauncherSettings.Favorites.DESKTOP_ICON_FLAG
@@ -405,6 +406,10 @@ constructor(
             if (
                 (info.itemType == ITEM_TYPE_APP_GROUP ||
                     info.itemType == ITEM_TYPE_DEEP_SHORTCUT ||
+                    info.itemType == Favorites.ITEM_TYPE_DIRECTORY ||
+                    info.itemType == Favorites.ITEM_TYPE_DOCUMENT ||
+                    info.itemType == Favorites.ITEM_TYPE_LINUX_APP ||
+                    info.itemType == Favorites.ITEM_TYPE_ANDROID_APP ||
                     info.itemType == ITEM_TYPE_APPLICATION) &&
                     !info.container.isHotseatOrDesktopContainer()
             ) {

@@ -61,7 +61,11 @@ public class ShortcutUtil {
     }
 
     private static boolean isApp(ItemInfo info) {
-        return info.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION;
+        return info.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION ||
+          info.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY  ||
+          info.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT || 
+          info.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP || 
+          info.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP;
     }
 
     private static boolean isPinnedShortcut(ItemInfo info) {

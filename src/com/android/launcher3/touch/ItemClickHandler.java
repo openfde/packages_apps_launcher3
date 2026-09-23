@@ -77,6 +77,26 @@ import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import android.net.Uri;
+import java.io.File;
+import android.provider.DocumentsContract;
+import com.android.launcher3.util.FileUtils;
+import java.util.Map;
+import com.android.launcher3.keyboard.ViewGroupFocusHelper;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.view.Display;
+import android.view.WindowManager;
+import android.view.LayoutInflater;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.view.KeyEvent;
+import androidx.annotation.Nullable;
+import android.os.Handler;
+import android.content.DialogInterface;
+import android.view.Window;
+
 /**
  * Class for handling clicks on workspace and all-apps items
  */
@@ -89,6 +109,12 @@ public class ItemClickHandler {
      * Instance used for click handling on items
      */
     public static final OnClickListener INSTANCE = ItemClickHandler::onClick;
+
+    private static final int WINDOW_DELETE_WIDTH  = 320;
+    private static final int WINDOW_DELETE_HEIGHT  = 200;
+
+    private static final int WINDOW_RENAME_WIDTH  = 450;
+    private static final int WINDOW_RENAME_HEIGHT  = 200;
 
     private static void onClick(View v) {
         // Make sure that rogue clicks don't get through while allapps is launching, or after the
@@ -386,6 +412,74 @@ public class ItemClickHandler {
         TestLogging.recordEvent(
                 TestProtocol.SEQUENCE_MAIN, "start: startAppShortcutOrInfoActivity");
         Intent intent = item.getIntent();
+        Log.i(TAG, "bellaLauncher startAppShortcutOrInfoActivity: " + item);
+
+        if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY){
+            String title = item.title.toString() ;
+            launcher.gotoDocApp(FileUtils.OPEN_DIR,title);
+            launcher.openFileDir(title);
+            return ;
+        }else if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT) {
+            String  title = item.title.toString() ;
+            launcher.gotoDocApp(FileUtils.OPEN_FILE,title);
+            launcher.openFile(title);
+            return ;
+        }else if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP){
+            String packageName = item.appWidgetProvider ;
+            PackageManager packageManager = launcher.getPackageManager();
+            intent = packageManager.getLaunchIntentForPackage(packageName);
+            if (intent != null) {
+                // 如果找到了启动 Intent，则启动应用
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                launcher.startActivity(intent);
+            } else {
+                // 如果没有找到启动 Intent，则提示用户
+                // 可以选择跳转到应用商店
+                AlertDialog alertDialog = new AlertDialog.Builder(v.getContext(),R.style.RoundedAlertDialog)
+                .setTitle(R.string.desktop_tips)
+                .setMessage(R.string.app_not_install)
+                .setNegativeButton(R.string.desktop_cancel, null)
+                .setPositiveButton(R.string.desktop_delete, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                         if(FileUtils.isOpenAppFusion()){
+                            launcher.gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_DESKTOP+""+item.title); 
+                         }else{
+                            launcher.gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_TEMP+""+item.title); 
+                         }
+                        
+                    }
+                }).create();
+
+                alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                alertDialog.show();
+
+                Window window = alertDialog.getWindow();
+                WindowManager m = launcher.getWindowManager();
+                float scale = FileUtils.getDpiScale(launcher);
+                Display d = m.getDefaultDisplay();
+                if (window != null) {
+                    WindowManager.LayoutParams params = window.getAttributes();
+                    window.setLayout((int)(WINDOW_DELETE_WIDTH*scale), (int)(WINDOW_DELETE_HEIGHT*scale));
+                    params.x = (int) (v.getX() - d.getWidth()/2);
+                    params.y = (int ) (v.getY() - d.getHeight()/2);
+                    window.setAttributes(params);
+                }
+            }
+            return ;
+        }else if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP) {
+            try{
+                Map<String,Object> map = FileUtils.getLinuxDesktopFileContent(item.title.toString());
+                String name = map.get("name").toString();
+                String exec = map.get("exec").toString();
+                launcher.openLinuxApp(name+"###"+exec+"###open###"+item.title.toString()); 
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            // launcher.selectOpenType(FileUtils.OPEN_LINUX_APP,name+"###"+exec+"###open###"+item.title.toString());
+            return ;
+        }
+
         if (item instanceof ItemInfoWithIcon itemInfoWithIcon) {
             if ((itemInfoWithIcon.runtimeStatusFlags
                     & ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE) != 0) {

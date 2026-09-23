@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootView"
+    android:layout_width="@dimen/bg_popup_item_width"
+    android:layout_height="match_parent"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="8dp">
+
+    <LinearLayout 
+        android:layout_width="@dimen/bg_popup_item_width"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_desktop_menu"
+        android:orientation="vertical">
+
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="@dimen/bg_popup_item_width"
+            android:layout_height="wrap_content" />
+
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>   

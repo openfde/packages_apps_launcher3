@@ -126,6 +126,21 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Locale;
 
+import com.android.launcher3.util.FileUtils;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
+import com.android.launcher3.R;
+import java.io.File;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import android.view.Gravity;
+import android.view.WindowManager;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+
+
+
 /**
  * TextView that draws a bubble behind the text. We cannot use a LineBackgroundSpan
  * because we want to make the bubble taller than the text and TextView's clip is
@@ -592,11 +607,133 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     @VisibleForTesting
     @UiThread
     public void applyIconAndLabel(ItemInfoWithIcon info) {
+        Log.d(TAG,"bellaLauncher applyIconAndLabel  info: "+info);
+
         FastBitmapDrawable oldIcon = mIcon;
         boolean isOldIconAutomated = oldIcon != null
                 && oldIcon.getDelegate() instanceof AutomatedIconDelegate;
         boolean isItemAutomated = Flags.enableAppAutomationIndicator()
                 && (info.runtimeStatusFlags & FLAG_AUTOMATED) != 0;
+
+        
+
+        FastBitmapDrawable iconDrawable = info.newIcon(getContext(), getIconCreationFlagsForInfo(info));
+        Bitmap bitmap = BitmapFactory.decodeResource(getContext().getResources(),R.mipmap.ic_unkown);
+        if(info.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY){
+            bitmap = BitmapFactory.decodeResource(getContext().getResources(), R.mipmap.ic_doc_folder);
+            iconDrawable = new FastBitmapDrawable(bitmap);
+        }else if(info.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT ){
+            String fileName = info.title.toString() ;
+            int resId =  R.mipmap.ic_doc_document;
+            String fileType = FileUtils.getFileTyle(fileName);
+            if(fileType !=null){
+                 if(fileType.contains("png") || fileType.contains("jpg")||fileType.contains("svg")){
+                    resId =  R.mipmap.ic_doc_image;
+                 }else if(fileType.contains("mp3") || fileType.contains("wav")|| fileType.contains("aac") || fileType.contains("flac") || fileType.contains("ogg")  ){
+                    resId =  R.mipmap.ic_doc_audio;
+                 }else if(fileType.contains("mp4") || fileType.contains("avi") || fileType.contains("mov") || fileType.contains("wmv") || fileType.contains("mpg") || fileType.contains("flv") || fileType.contains("3gp")   ){
+                    resId =  R.mipmap.ic_doc_video;
+                 }else if(fileType.contains("txt") || fileType.contains("md") || fileType.contains("xml")  || fileType.contains("java")  || fileType.contains("htm") || fileType.contains("json")  ){
+                    resId =  R.mipmap.ic_doc_document;
+                 }else if(fileType.contains("pdf") ){
+                    resId =  R.mipmap.ic_doc_pdf;
+                 } else if(fileType.contains("kt") ){
+                    resId =  R.mipmap.ic_kotlin;
+                 }else if(fileType.contains("sh") ){
+                    resId =  R.mipmap.ic_shell;
+                 }else if(fileType.contains("db") || fileType.contains("sql") ){
+                    resId =  R.mipmap.ic_sql;
+                 }else if(fileType.contains("apk") ){
+                    resId =  R.mipmap.ic_doc_apk;
+                 } else if(fileType.contains("ppt")){
+                    resId =  R.mipmap.ic_doc_powerpoint;
+                 } else if(fileType.contains("doc")){
+                    resId =  R.mipmap.ic_doc_word;
+                 } else if(fileType.contains("xls")){
+                    resId =  R.mipmap.ic_doc_excel;
+                 } else if(fileType.contains("rar")||fileType.contains("zip") ){
+                    resId =  R.mipmap.ic_doc_compressed;
+                 } else{
+                    resId =  R.mipmap.ic_unkown;
+                 } 
+            }else{
+                resId =  R.mipmap.ic_unkown;
+            }
+            Log.i(TAG,"bellaLauncher applyIconAndLabel  fileName: "+fileName + " ,fileType  "+fileType);
+            bitmap = BitmapFactory.decodeResource(getContext().getResources(),resId);
+            iconDrawable = new FastBitmapDrawable(bitmap);
+        }else if(info.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP){
+            try {
+                 String packageName = info.appWidgetProvider.toString();
+                 bitmap = FileUtils.pngToBitmap(getContext(),packageName);
+                 if(bitmap !=null){
+                    bitmap = FileUtils.getRoundedCornerBitmap(bitmap,16);
+                    iconDrawable = new FastBitmapDrawable(bitmap);
+                 }else{
+                    // Log.e(TAG,"bellaLauncher applyIconAndLabel  bitmap is null  " );
+                 }
+            } catch (Exception e) {
+                Log.e(TAG,"bellaLauncher applyIconAndLabel e: "+e.toString() );
+                e.printStackTrace();
+            }
+        }else if(info.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP){
+            bitmap = BitmapFactory.decodeResource(getContext().getResources(), R.mipmap.bg_linux);
+            String appTitle = info.title.toString();
+            Map<String,Object> map = Launcher.getDesktopMap(appTitle);
+            Log.i(TAG,"bellaLauncher linux applyIconAndLabel2  map: "+map);
+            String name = "";
+            if(map !=null && !map.isEmpty()){
+               try{
+                name = map.get("Name").toString().replaceAll(" ", "_");
+                // Log.i(TAG,"bellaLauncher linux applyIconAndLabel3  name: "+name);
+                String exec = map.get("Path").toString().replaceAll(" %F", "").replaceAll(" %u", "").replaceAll(" %U", "").replaceAll(" ", "");
+                int lastIndex = exec.lastIndexOf('/');
+                String key = name ;
+                if(FileUtils.containsChinese(name)){
+                    if(lastIndex > 0){
+                        key = exec.substring(lastIndex+1);
+                     }
+                }
+                String IconPath = map.get("IconPath").toString();
+                //String IconPath = FileUtils.getSystemProperty(key ,"-1");
+
+                // Log.i("bella","FastBitmapDrawable_name : "+name  + " , IconPath "+IconPath + ",key "+key  );
+        
+                if("-1".equals(IconPath) ){
+
+                }else{
+                    String icon = "/volumes"+"/"+FileUtils.getLinuxUUID() + IconPath;
+                    File f = new File(icon);
+                    // Log.i("bella","FastBitmapDrawable exists : "+f.exists() + ",icon "+icon);
+                    if(IconPath.contains(".svg") ){
+                        bitmap = FileUtils.svgToBitmap(FileUtils.loadSvgFromAssets(getContext(),icon));
+                    }else{
+                        bitmap = BitmapFactory.decodeFile(icon); 
+                    }    
+                }
+                bitmap = FileUtils.getRoundedCornerBitmap(bitmap,16);
+               }catch(Exception e){
+                  e.printStackTrace();
+               }
+            }
+            Bitmap b2 = FileUtils.vectorToBitmap(getContext(), R.mipmap.flag_linux);
+            if("Photoshop".equals(name) || name.contains("CAD")){
+                b2 = FileUtils.vectorToBitmap(getContext(), R.mipmap.flag_windows);
+            }
+            b2  = FileUtils.scaleBitmap(b2,36,36);
+            if(bitmap != null ){
+                bitmap  = FileUtils.scaleBitmap(bitmap,64,64);
+                Bitmap b = FileUtils.overlayBitmaps(bitmap,b2,32,36);
+                iconDrawable = new FastBitmapDrawable(b);
+            }else{
+                bitmap  = FileUtils.vectorToBitmap(getContext(), R.mipmap.bg_linux);
+                // BitmapInfo bi = new BitmapInfo(bitmap,0);
+                // iconDrawable = newIcon(getContext(), bi);
+                iconDrawable = new FastBitmapDrawable(bitmap);
+            }
+        }
+
+        oldIcon = mIcon = iconDrawable ;
 
         if (isItemAutomated)  {
             // If icon is not already animated or underlying bitmap changed then replace it.
@@ -610,6 +747,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         }
         // Always check if we should update loading progress
         maybeApplyProgressLevel(info, oldIcon);
+        setIcon(iconDrawable);
         applyLabel(info);
     }
 

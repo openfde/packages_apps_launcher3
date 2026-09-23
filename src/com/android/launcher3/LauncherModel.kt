@@ -40,6 +40,7 @@ import com.android.launcher3.model.ModelInitializer
 import com.android.launcher3.model.ModelLauncherCallbacks
 import com.android.launcher3.model.ModelTaskController
 import com.android.launcher3.model.ModelWriterFactory
+import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo
 import com.android.launcher3.model.tasks.CacheDataUpdatedTask
 import com.android.launcher3.pm.UserCache
@@ -196,6 +197,99 @@ constructor(
 
     /** Starts the loader, and returns a completion stage indicating when the loading is complete */
     fun startLoader(callerName: String): CompletionStage<Unit> = startLoader(callerName, arrayOf())
+
+    fun rearray(context: Context, type: String): List<ItemInfo>? {
+        // synchronized(mLock) {
+        //     // Don't bother to start the thread if we know it's not going to do anything
+        //     val callbacksList = getCallbacks()
+
+        //     if (callbacksList.isNotEmpty()) {
+        //         // Clear any pending bind-runnables from the synchronized load process.
+        //         // callbacksList.forEach {
+        //         //     mMainExecutor.execute(it::clearPendingBinds)
+        //         // }
+
+        //         // If there is already one running, tell it to stop.
+        //         stopLoader()
+
+        //         val tempItems = mBgDataModel.workspaceItems
+        //         val workspaceItems = ArrayList<ItemInfo>()
+
+        //         for (ii in tempItems) {
+        //             if (ii.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY ||
+        //                 ii.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT
+        //             ) {
+        //                 // String documentId = FileUtils.getRootDir() + "/桌面/";
+        //                 var documentId = FileUtils.PATH_ID_DESKTOP
+        //                 var f = File(documentId + ii.title)
+
+        //                 if (f.exists()) {
+        //                     workspaceItems.add(ii)
+        //                 } else {
+        //                     documentId = FileUtils.getRootDir() + "/Desktop/"
+        //                     f = File(documentId + ii.title)
+
+        //                     if (f.exists()) {
+        //                         workspaceItems.add(ii)
+        //                     } else {
+        //                         Log.i( TAG,"workspaceItems.............not exist:" +ii.title +" ,  " + ii + ",documentId " +documentId)
+        //                     }
+        //                 }
+        //             } else {
+        //                 workspaceItems.add(ii)
+        //             }
+        //         }
+
+        //         mBgDataModel.workspaceItems = workspaceItems
+
+        //         if ("title" == type) {
+        //             workspaceItems.sortWith { p1, p2 ->
+        //                 p1.title.toString().compareTo(p2.title.toString())
+        //             }
+        //         } else if ("itemType" == type) {
+        //             workspaceItems.sortWith { p1, p2 ->
+        //                 val itemTypeCompare = p1.itemType.compareTo(p2.itemType)
+
+        //                 if (itemTypeCompare != 0) {
+        //                     itemTypeCompare
+        //                 } else {
+        //                     val title1 = p1.title?.toString() ?: ""
+        //                     val title2 = p2.title?.toString() ?: ""
+
+        //                     val ext1 = getFileExtension(title1)
+        //                     val ext2 = getFileExtension(title2)
+
+        //                     ext1.compareTo(ext2)
+        //                 }
+        //             }
+        //         } else {
+        //             workspaceItems.sortWith { p1, p2 ->
+        //                 p1.id.compareTo(p2.id)
+        //             }
+        //         }
+
+        //         val idp = LauncherAppState.getIDP(context)
+
+        //         Log.i(TAG,"workspaceItems.size ${workspaceItems.size}," +"idp.numRows: ${idp.numRows}," +"idp.numColumns: ${idp.numColumns}"
+        //         )
+
+        //         val launcher = Launcher.getLauncher(context)
+
+        //         for (i in workspaceItems.indices) {
+        //             val info = workspaceItems[i]
+
+        //             launcher.removeView(info.cellX, info.cellY)
+
+        //             info.cellX = i / idp.numRows
+        //             info.cellY = i % idp.numRows
+        //         }
+
+        //         return workspaceItems
+        //     }
+        // }
+
+        return null
+    }
 
     private fun startLoader(
         callerName: String,

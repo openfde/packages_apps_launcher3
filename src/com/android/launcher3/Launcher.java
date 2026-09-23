@@ -100,6 +100,7 @@ import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.ItemInfoMatcher.forFolderMatch;
 import static com.android.launcher3.util.SettingsCache.TOUCHPAD_NATURAL_SCROLLING;
 
+import android.os.Handler;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
@@ -114,6 +115,8 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -131,6 +134,7 @@ import android.util.Pair;
 import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.KeyboardShortcutGroup;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MotionEvent;
 import android.view.View;
@@ -255,18 +259,69 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import com.android.documentsui.IDocAidlInterface;
+import com.android.documentsui.IDataChangedCallback;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import android.content.ComponentName;
+import com.android.launcher3.util.FileUtils;
+import com.android.launcher3.util.DbUtils;
+import com.android.launcher3.util.NetUtils;
+import com.android.launcher3.util.StringUtils;
+import com.android.launcher3.util.SPUtils;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.io.File;
+import java.util.Arrays;
+import android.graphics.Point;
+import android.app.Instrumentation;
+import android.view.WindowManager;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import com.android.launcher3.model.data.MessageEvent;
+import android.content.ContentValues;
+import android.os.Looper;
+import android.net.Uri;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import androidx.core.content.ContextCompat;
+import androidx.core.app.ActivityCompat;
+import android.content.pm.PackageManager;
+import android.provider.Settings;
+import android.os.Environment;
+import androidx.core.content.FileProvider;
+import com.android.quickstep.util.ImageActionUtils;
+import android.widget.PopupWindow;
+import android.view.Gravity;
+import android.widget.Toast;
+import android.graphics.Point;
+import android.app.ActivityManager;
+import java.nio.file.Paths;
+import java.util.stream.Collectors;
+import android.view.ViewTreeObserver;
+import android.content.pm.ApplicationInfo;
+import android.graphics.drawable.Drawable;
+import android.database.ContentObserver;
 /**
  * Default launcher application.
  */
 public class Launcher extends StatefulActivity<LauncherState>
         implements InvariantDeviceProfile.OnIDPChangeListener {
     public static final String TAG = "Launcher";
+
+    private static final String EXTRA_WALLPAPER_OFFSET = "com.android.launcher3.WALLPAPER_OFFSET";
+    private static final String EXTRA_WALLPAPER_FLAVOR = "com.android.launcher3.WALLPAPER_FLAVOR";
+    private static final String EXTRA_WALLPAPER_LAUNCH_SOURCE =
+            "com.android.wallpaper.LAUNCH_SOURCE";
 
     public static final ContextTracker.ActivityTracker<Launcher> ACTIVITY_TRACKER =
             new ContextTracker.ActivityTracker<>();
@@ -308,6 +363,8 @@ public class Launcher extends StatefulActivity<LauncherState>
     private final KeyboardShortcutsDelegate mKeyboardShortcutsDelegate =
             new KeyboardShortcutsDelegate(this);
 
+    IDocAidlInterface idocAidl;
+        
     @Thunk
     Workspace<?> mWorkspace;
 
@@ -355,6 +412,12 @@ public class Launcher extends StatefulActivity<LauncherState>
     private PopupController<Launcher> mPopupControllerForAppIcons;
 
     private WidgetPickerDataProvider mWidgetPickerDataProvider;
+
+    private List<WorkspaceItemInfo> mNewShortcutItems = new ArrayList<>();
+    private final Object mFdeInitLock = new Object();
+    public static List<Map<String,Object>> listDeskTopLinux ;
+    public static List<Map<String,Object>> listDeskTopAndroid;
+    int countLinuxApp = 0;
 
     // We only want to get the SharedPreferences once since it does an FS stat each time we get
     // it from the context.
@@ -408,6 +471,18 @@ public class Launcher extends StatefulActivity<LauncherState>
     @Override
     @TargetApi(Build.VERSION_CODES.S)
     protected void onCreate(Bundle savedInstanceState) {
+        FileUtils.setSystemProperty("launcher_time",System.currentTimeMillis()+"");
+        // EventBus.getDefault().register(this);
+
+
+        FileUtils.createDesktopDir(FileUtils.PATH_ID_DESKTOP);
+        FileUtils.createDesktopDir( FileUtils.getHideHomePath());
+        FileUtils.createDesktopDir( FileUtils.getHideHomePicPath());
+        FileUtils.createDesktopDir( FileUtils.PATH_ID_TEMP);
+        FileUtils.createDesktopDir(FileUtils.getIconPath());
+
+        bindService();
+
         TraceHelper.INSTANCE.beginSection(ON_CREATE_EVT);
         Trace.beginAsyncSection(DISPLAY_WORKSPACE_TRACE_METHOD_NAME, SINGLE_TRACE_COOKIE);
         Trace.beginAsyncSection(DISPLAY_ALL_APPS_TRACE_METHOD_NAME, SINGLE_TRACE_COOKIE);
@@ -1583,7 +1658,8 @@ public class Launcher extends StatefulActivity<LauncherState>
     public void onDestroy() {
         super.onDestroy();
         ACTIVITY_TRACKER.onContextDestroyed(this);
-
+        // EventBus.getDefault().unregister(this);
+        unbindService(serviceConnection);
         if (mNaturalScrollingChangedSafeCloseable != null) {
             mNaturalScrollingChangedSafeCloseable.close();
             mNaturalScrollingChangedSafeCloseable = null;
@@ -2909,6 +2985,736 @@ public class Launcher extends StatefulActivity<LauncherState>
         mLastTouchUpTime = -1;
     }
 
+    public void bindForceWorkspace(){
+         getModel().forceReload("REQUEST_CLEAR_DATA");
+    }
+
+    public void removeView(int x, int y){
+        try{
+            mWorkspace.removeWorkspaceItem(mWorkspace.getScreenWithId(0).getChildAt(x, y));
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public static String getTopActivity(Context context) {
+    ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+    if (am != null) {
+        List<ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
+        if (!tasks.isEmpty()) {
+            ComponentName topActivity = tasks.get(0).topActivity;
+            return topActivity.getClassName();
+        }
+    }
+    return null;
+}
+
+
+
+
+
+
+
+
+  public  boolean startWallpaperPicker(View v) {
+        if (!Utilities.isWallpaperAllowed(this)) {
+            String message = getStringCache() != null
+                    ? getStringCache().disabledByAdminMessage
+                    : getString(R.string.msg_disabled_by_admin);
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        Intent intent = new Intent(Intent.ACTION_SET_WALLPAPER)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                .putExtra(EXTRA_WALLPAPER_OFFSET,
+                 getWorkspace().getWallpaperOffsetForCenterPage())
+                .putExtra(EXTRA_WALLPAPER_LAUNCH_SOURCE, "app_launched_launcher")
+                .putExtra(EXTRA_WALLPAPER_FLAVOR, "focus_wallpaper");
+        String pickerPackage = this.getString(R.string.wallpaper_picker_package);
+        if (!TextUtils.isEmpty(pickerPackage)) {
+            intent.setPackage(pickerPackage);
+        }
+        return this.startActivitySafely(v, intent, placeholderInfo(intent)) != null;
+    }
+
+    static WorkspaceItemInfo placeholderInfo(Intent intent) {
+        WorkspaceItemInfo placeholderInfo = new WorkspaceItemInfo();
+        placeholderInfo.intent = intent;
+        placeholderInfo.container = LauncherSettings.Favorites.CONTAINER_SETTINGS;
+        return placeholderInfo;
+    }
+
+
+    private void bindService(){
+        Log.d(TAG," onServiceConnected start bindService !");
+        Intent mIntent = new Intent();
+        mIntent.setComponent(new ComponentName("com.android.documentsui", "com.android.documentsui.IpcService"));
+        boolean bindFlag = bindService(mIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // ipcAidl = IMyAidlInterface.Stub.asInterface(service);
+            Log.d(TAG," onServiceConnected success !");
+            idocAidl = IDocAidlInterface.Stub.asInterface(service);
+            // gotoDocApp(FileUtils.OP_CREATE_ANDROID_ICON,"");
+
+            // gotoDocApp(FileUtils.OP_CREATE_LINUX_ICON,"");
+            initFde();
+            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshLinuxApps(Launcher.this);
+                    }
+                }, 10 * 5);
+                   
+            try{
+                idocAidl.register(new IDataChangedCallback.Stub(){
+                    @Override
+                    public void onCallback(String params)  {
+                        Log.i(TAG," onCallback params: "+params);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if("PASTE".equals(params) ){
+                                    refreshDesktopFiles(Launcher.this);
+                                    // bindWorkspace();
+                                }         
+                            }
+                        });           
+                    }
+
+                    @Override
+                    public void onCallbackString(String method,String params)  {
+                        Log.i(TAG," onCallbackString method: "+method + ", params "+params);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if("NEW_FILE".equals(method) || "NEW_DIR".equals(method) ){
+
+                                }else if("RENAME".equals(method)){
+
+                                }else if("UPDATE_DESKTOP".equals(method) || "DELETE_FILE".equals(method)){
+                                    if(params == null || "".equals(params) ){
+                                       //not refresh
+                                    }else if(params.endsWith(".desktop")){
+                                        try{
+                                            String[] arrFileName = params.split("###");
+                                            if("delete".equals(arrFileName[0])){
+                                                String fileName = Paths.get(arrFileName[1]).getFileName().toString();
+                                                Log.d(TAG, "delete c: arrFileName[1]: "+arrFileName[1] + ",fileName "+fileName);
+                                                if(fileName.endsWith("_fde.desktop")){
+                                                    // delete by fileName
+                                                    if(FileUtils.isOpenAppFusion()){
+                                                        DbUtils.deleteByFileNameFromDatabase(getModel().getModelDbController(),fileName);
+                                                    }else{
+                                                        try{
+                                                            String packageName = fileName.replaceAll("_fde.desktop", "");
+                                                            boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
+                                                            if(!isAppInstalled){
+                                                                DbUtils.deleteByFileNameFromDatabase(getModel().getModelDbController(),fileName);
+                                                            }
+                                                        }catch(Exception e){
+                                                            e.printStackTrace();
+                                                        }
+                                                    }
+
+                                                }else{
+                                                    //delete by title
+                                                    DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fileName); 
+                                                }
+                                            }
+                                        }catch(Exception e){
+                                            e.printStackTrace();
+                                        }
+                                        refreshLinuxApps(Launcher.this);
+                                    }else{
+                                        refreshDesktopFiles(Launcher.this);
+                                    }
+                                    // getModel().refreshDeskFileList(Launcher.this);
+                                } 
+                            }
+                        });
+                       
+                    }
+                });
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // ipcAidl = null;
+            idocAidl = null;
+        }
+    };
+
+    public void gotoDocApp(String method,String title){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    // boolean isActivityRunning = FileUtils.isActivityRunning(Launcher.this,"com.android.documentsui","com.android.documentsui.ui.OpenLinuxAppActivity");
+                    // Log.i(TAG, "bellaLauncher gotoDocApp  method: " + method + ", title "+title + ",isActivityRunning "+isActivityRunning);
+                    idocAidl.basicIpcMethon(method,title);
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();  
+    }
+
+    public void openAppListPage(){
+        // Intent intent = new Intent(Launcher.this,AppListActivity.class);
+        // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // startActivity(intent);
+    }
+
+    public void openLinuxApp(String params){
+        String[] arrParams = params.split("###");
+        String name = arrParams[0].trim().replaceAll("%[FfUu]", "");
+        String exec = arrParams[1].trim().replaceAll("%[FfUu]", "");
+        String type = arrParams[2];
+        String fileName =  name+".desktop";
+        if(arrParams.length > 3){
+            fileName = arrParams[3];
+        }
+        String path = FileUtils.PATH_ID_DESKTOP+fileName;
+        File file = new File(path);
+        Uri uri = FileProvider.getUriForFile(Launcher.this,ImageActionUtils.AUTHORITY,file);
+        Intent shareIntent = new Intent(Intent.ACTION_VIEW);
+        shareIntent.setDataAndType(uri, "application/vnd.desktop");
+        shareIntent.putExtra("fromOther", "Launcher");
+        shareIntent.putExtra("vnc_activity_name", name);
+        shareIntent.putExtra("App", name);
+        shareIntent.putExtra("openParams", params);
+        shareIntent.putExtra("docTitle", fileName);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_SINGLE_TOP;
+        flags |= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        flags |= Intent.FLAG_ACTIVITY_NEW_TASK;
+        shareIntent.setFlags(flags);
+        startActivity(shareIntent);
+    }
+
+    public void renameFile(String params){
+        Intent intent = new Intent();
+        ComponentName componentName = new ComponentName("com.android.documentsui", "com.android.documentsui.ui.RenameDialogActivity");
+        intent.setComponent(componentName);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra("oldFileName",params);
+        startActivity(intent);
+    }
+
+    public void openFileDir(String params){
+        Intent intent = new Intent();
+        ComponentName componentName = new ComponentName("com.android.documentsui", "com.android.documentsui.files.FilesActivity");
+        intent.setComponent(componentName);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra("childPath",params);
+        startActivity(intent);
+    }
+
+    public void openFile(String params){
+        if (!Environment.isExternalStorageManager()) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+            intent.setData(Uri.parse("package:$packageName"));
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }else{
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            // String path = "content://com.android.externalstorage.documents/document/primary:Desktop%2f"+params;
+            // Uri uri = Uri.parse(path);
+            String path = FileUtils.PATH_ID_DESKTOP+params;
+            File file = new File(path);
+            Uri uri = FileProvider.getUriForFile(Launcher.this,ImageActionUtils.AUTHORITY,file);
+            String mimeType = FileUtils.getMimeType(file);
+            Log.d(TAG,"basicIpcMethon.....path "+path + ",mimeType "+mimeType + ",uri "+uri);
+            if (mimeType == null) {
+                if (params.contains(".txt") || params.contains(".json")  || params.contains(".md")) {
+                    intent.setDataAndType(uri, "text/plain");
+                } else {
+                    intent.setDataAndType(uri, "application/*");
+                }
+            }else if (mimeType.contains("image")) {
+                intent.setDataAndType(uri, "image/*");
+            }else if(mimeType.contains("text") || mimeType.contains("plain") || mimeType.contains("json")){
+                intent.setDataAndType(uri, "text/plain");
+            }else{
+                intent.setDataAndType(uri, mimeType);
+            }
+            intent.putExtra("docTitle",params);
+            int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_SINGLE_TOP;
+            flags |= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+            flags |= Intent.FLAG_ACTIVITY_NEW_TASK;
+            intent.setFlags(flags);
+            startActivity(intent);
+        }
+    }
+
+    public void selectOpenType(String name,String exec,String title){
+       // gotoDocApp(method,title);
+
+        String fileName =  name+".desktop";
+        String path = "content://com.android.externalstorage.documents/document/primary:Desktop%2f" + fileName;
+        Uri uri = Uri.parse(path);
+        Intent shareIntent = new Intent(Intent.ACTION_VIEW);
+        shareIntent.setDataAndType(uri, "application/vnd.desktop");
+        shareIntent.putExtra("fromOther", "Launcher");
+        shareIntent.putExtra("vnc_activity_name", name);
+        shareIntent.putExtra("App", name);
+        shareIntent.putExtra("openParams", name+"###"+exec+"###type###"+title);
+        shareIntent.putExtra("docTitle", fileName);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_SINGLE_TOP;
+        flags |= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        flags |= Intent.FLAG_ACTIVITY_NEW_TASK;
+        shareIntent.setFlags(flags);
+        startActivity(shareIntent);
+    }
+
+
+   public void refreshDesktopFiles(Context context){
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
+            return addDesktopFiles(0,null);
+        }, executorService);
+
+        future.thenAccept(result -> {
+            Log.d(TAG, "refreshDesktopFiles-result  "+result );
+            if(1 == result){
+                // bindForceWorkspace();
+            }
+        });
+
+        executorService.shutdown();
+    }
+
+    public synchronized int addDesktopFiles(int pos,List<Point> listIdle){
+        try{
+            String documentId =  FileUtils.getAllDesktopPath();
+            List<Map<String,Object>>  listTexts = DbUtils.queryDesktopTextFilesFromDatabase(getModel().getModelDbController());
+            if(listIdle == null){
+                listIdle = FileUtils.getAllIdlePoints(Launcher.this,getModel().getModelDbController());
+            }
+            // List<Map<String,Object>>  listDesktopFileOrDir = DbUtils.queryDesktopFileInDatabase(Launcher.this,f.getName());
+            if(listTexts !=null){
+                // Log.d(TAG, "refreshDesktopFiles  size  "+listTexts.size() + ",listTexts: "+listTexts + ",pos : "+pos);
+                for(Map<String,Object> mp : listTexts){
+                    String fName = mp.get("title").toString();
+                    File f = new File(documentId + fName);
+                    if(!f.exists()){
+                        // Log.d(TAG, "refreshDesktopFiles file not exists fName  "+fName );
+                        // mBgDataModel.removeItem(mContext, item);
+                         DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fName);   
+                    }
+                }
+            }
+
+            if(pos == 0){
+                mNewShortcutItems.clear();
+            }
+            int index = pos;
+            File[] files = FileUtils.getAllDesktopFiles();
+            if(files !=null){
+                Arrays.sort(files, (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified()));
+                for(File f : files){
+                    String fTitle = f.getName().toLowerCase() ;
+                    //如果被android应用被卸载了则删除desktop文件,但新版本去掉此逻辑
+                    if(fTitle.contains(".desktop")) {
+                        // Log.d(TAG, "refreshDesktopFiles: not show this file  ,fname: "+f.getName() );
+                    //     if(fTitle.contains("_fde.desktop")){
+                    //         //如果是android应用
+                    //       try{
+                    //         Map<String,Object> mapFiles =  FileUtils.getLinuxContentString(f.getName());
+                    //         Log.d(TAG, "refreshDesktopFiles: mapFiles: "+mapFiles );
+                    //         String packageName = mapFiles.get("PackageName").toString();
+                    //         if(packageName != null){
+                    //             boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
+                    //             if(!isAppInstalled){
+                    //                 gotoDocApp(FileUtils.DELETE_FILE, FileUtils.PATH_ID_DESKTOP+""+packageName+"_fde.desktop");
+                    //             }
+                    //         }
+                    //       }catch(Exception e){
+                    //         e.printStackTrace();
+                    //       }
+                    //     }else{
+                    //         //则不管   
+                    //     }
+                         try{
+                            if(fTitle.contains("_fde.desktop")){
+                                Map<String,Object> mapFiles =  FileUtils.getLinuxContentString(f.getName());
+                                String packageName = fTitle.replaceAll("_fde.desktop", "");
+                                boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
+                                if(!FileUtils.isOpenAppFusion()){
+                                    if(!isAppInstalled){
+                                        DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),f.getName());
+                                    }
+                                    //if close app_fusion move android desktop to hide dir
+                                    if(f.exists()){
+                                        if(!isAppInstalled){
+                                            f.delete();
+                                        }else{
+                                            File fi2 = new File(FileUtils.getHideHomeTempPath() +f.getName());
+                                            boolean isSuccess = f.renameTo(fi2);
+                                        }
+                                    }
+                                }
+                            }
+                         } catch(Exception e){
+                            Log.e(TAG,"move_name   ,e: "+e.toString());
+                            e.printStackTrace();
+                         }
+                         continue;
+                    }
+                    //默认未添加该问题到DB，如果查询到则不执行插入操作
+                    boolean found = false ;
+                    if(listTexts != null){
+                        found = listTexts.stream().anyMatch(item -> f.getName().equals(item.get("title").toString()));
+                    } 
+                    
+                    if(!found){
+                        // Log.d(TAG, "refreshDesktopFiles: listIcons is null "+files.length  +" ,fname: "+f.getName());
+                        WorkspaceItemInfo info = new WorkspaceItemInfo();
+                      //  Point point = FileUtils.findNextFreePoint(this);
+                        info.mComponentName = new ComponentName("com.android.documentsui","com.android.documentsui.LauncherActivity");;
+                        info.title = f.getName();
+                        info.container = -100;
+                        info.screenId = 0;
+                        Intent intent = new Intent();
+                        intent.setPackage("com.android.launcher3");
+                        info.intent = intent;
+
+                        info.cellY = listIdle.get(index).y;
+                        info.cellX = listIdle.get(index).x;
+                        // Log.w(TAG, "refreshDesktopFiles: files info.cellX  "+info.cellX + " ,info.cellY: "+info.cellY + " ,info.title: "+info.title + ",f.getName() "+f.getName() + ",info.id "+info.id);
+                        if(f.isDirectory()){
+                            info.itemType = LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY;
+                        }else{
+                            info.itemType = LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT;
+                        }
+                        index++;
+                        mNewShortcutItems.add(info);
+                    }else{
+                        // Log.d(TAG, "refreshDesktopFiles: listIcons is exists  "+files.length  + ",fname "+f.getName());
+                    }     
+                }
+                batchInsert();
+                return 1;
+            }else{
+                Log.d(TAG, "bindItems: files is null  " );
+                batchInsert();
+                return 0;
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        batchInsert();
+        return 0;
+    }
+
+    private void batchInsert(){
+        synchronized (mFdeInitLock) {
+            int size = mNewShortcutItems.size();
+            if(size == 0){
+                bindForceWorkspace();
+            }else{
+                List<WorkspaceItemInfo> uniqueList = mNewShortcutItems.stream()
+                    .collect(Collectors.toMap(WorkspaceItemInfo::getTitle, p -> p, (p1, p2) -> p1))
+                    .values().stream().collect(Collectors.toList());
+
+                for(WorkspaceItemInfo shortcut : uniqueList){
+                    insertOrUpdateFavorites(shortcut);
+                }
+
+                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                bindForceWorkspace();
+                            }
+                        });
+                    }
+                }, ON_ACTIVITY_RESULT_ANIMATION_DELAY);
+            }
+        }
+    }
+
+    public void refreshLinuxApps(Context context){
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
+            if(FileUtils.isOpenAppFusion()){
+                 try{
+                    File[] files = FileUtils.getAllIconDesktopFiles();
+                    if(files !=null){
+                         for(File f : files){
+                            String name = f.getName();
+                            File fi2 = new File(FileUtils.PATH_ID_DESKTOP +f.getName());
+                            if(f.exists()){
+                                boolean isSuccess = f.renameTo(fi2);
+                            }else{
+                                Log.e(TAG,"move_name f is not exists");
+                            }
+                         }
+                    }
+                } catch(Exception e){
+                    Log.e(TAG,"move_name e "+e.toString());
+                    e.printStackTrace();
+                }
+                return addLinuxApps();
+            }else{
+                 DbUtils.deleteAllLinuxAppFromDatabase(getModel().getModelDbController());
+                 listDeskTopAndroid  = FileUtils.getInstalledAppsList(Launcher.this);
+                 addDesktopFiles(0,null);
+            }
+            return 0 ;
+        }, executorService);
+
+        future.thenAccept(result -> {
+            Log.d(TAG, "refreshLinuxApps result  "+result );
+            if(1 == result){
+                // bindForceWorkspace();
+            }
+        });
+
+        executorService.shutdown();
+    }
+
+    public synchronized int addLinuxApps(){
+        try{
+            mNewShortcutItems = new ArrayList<>();
+            List<Point> listIdle = FileUtils.getAllIdlePoints(Launcher.this,getModel().getModelDbController());
+
+            listDeskTopLinux = NetUtils.getLinuxDesktopApp();
+            //所有桌面Linux应用,android应用
+            List<Map<String,Object>>  listApps = DbUtils.queryLinuxAndAndroidAppInDatabase(getModel().getModelDbController());
+            if(listApps !=null){
+                //if db exists but linux not  exists . delete db data.
+                for(Map<String,Object> mp : listApps){
+                    String fName = mp.get("title").toString();
+                    boolean isExists = false;
+                    isExists = listDeskTopLinux.stream().anyMatch(item -> fName.equals(item.get("FileName").toString()));
+                    if(!isExists){
+                        DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fName); 
+                    }
+                }
+            }
+
+            // int index = 1;//DbUtils.queryMaxIdFromDatabase(Launcher.this);
+            countLinuxApp = 0 ;
+            if(listDeskTopLinux !=null ){
+                int numRows  =  FileUtils.getScreenRows(Launcher.this);
+                if(listApps != null && listDeskTopLinux !=null){
+                    Log.d(TAG, "refreshDesktopFiles-addLinuxApps: listApps "+listApps.toString() + ",listDeskTopLinux "+listDeskTopLinux.size());
+                }
+
+                for(Map<String,Object> mp : listDeskTopLinux){
+                    boolean IsAndroidApp = Boolean.valueOf(mp.get("IsAndroidApp").toString());
+                    boolean found = false ;
+                    String execPath = mp.get("Path").toString();
+                    String fileName = mp.get("FileName").toString();//Paths.get(mp.get("FileName").toString()).getFileName().toString();
+
+                    String IconPath = FileUtils.getLinuxPrefixPath() + mp.get("IconPath").toString();
+                    String desc = execPath + "###"+IconPath ;
+                    String packageName = getPackageName();
+                    
+                    if(IsAndroidApp){
+                        packageName = execPath.replaceAll("fde_launch ","");
+                        if(listApps != null){
+                            //1、Linux端拷贝的应用 title是带.desktop的
+                            found = listApps.stream().anyMatch(item -> fileName.equals(StringUtils.ToString(item.get("title"))));
+
+                            String filePath =  FileUtils.PATH_ID_DESKTOP + packageName+"_fde.png";
+                            File file = new File(filePath);
+                            if(!file.exists()){
+                                boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
+                                if(isAppInstalled){
+                                    PackageManager packageManager = getPackageManager();
+                                    ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
+                                    Drawable icon  = applicationInfo.loadIcon(packageManager);
+                                    FileUtils.drawableToPng(this,packageName,icon);
+                                }
+                            }
+
+                            // if(!found){
+                            //     //2、android端自己生成的title是应用名,则根据appWidgetProvider字段去匹配且itemType=0包名
+                            //     final String  fName = packageName;
+                            //     final String  fdeName = packageName+"_fde.desktop";
+                            //     Log.d(TAG, "refreshDesktopFiles-addLinuxApps: fileName "+fileName +",fName "+fName );
+                            //     //1、刚生成的_fde.desktop  ,从Linux拷贝出来的desktop文件
+                            //     found = listApps.stream().anyMatch(item ->  !fdeName.equals(StringUtils.ToString(item.get("title"))) && fName.equals(StringUtils.ToString(item.get("appWidgetProvider"))) && StringUtils.ToInt(item.get("itemType"),-1) == 0);
+                            // }
+                        } 
+                        Log.d(TAG, "refreshDesktopFiles-addLinuxApps: fileName: "+fileName + ",found "+found +",packageName: "+packageName );
+                    }else{
+                        if(listApps != null){
+                            found = listApps.stream().anyMatch(item -> fileName.equals(item.get("title").toString()));
+                            Log.d(TAG, "refreshDesktopFiles-addLinuxApps: fileName: "+fileName + ",found "+found  + ",IsAndroidApp： "+IsAndroidApp);
+                        } 
+                    }
+
+                    if(!found){
+                        WorkspaceItemInfo info = new WorkspaceItemInfo();
+                        //Point point = FileUtils.findNextFreePoint(this);
+
+                        info.title = fileName;
+                        info.container = -100;
+                        info.screenId = 0;
+                        Intent intent = new Intent();
+                        intent.putExtra("App", fileName);
+                        intent.putExtra("Path", execPath);
+                        intent.putExtra("packageName", packageName);
+                        intent.setPackage(getPackageName());
+                        info.intent = intent;
+                        // int newY = y + index ;
+                        // int sY = newY%numRows ;
+                        // int sX = newY/numRows + point.x ;
+                        if(IsAndroidApp){
+                            info.mComponentName = new ComponentName(packageName,packageName+".MainActivity");
+                            info.appWidgetProvider = packageName;
+                            info.itemType = LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP;
+                        }else{
+                            info.mComponentName = new ComponentName("com.termux.x11","com.termux.x11.AppListActivity");
+                            info.appWidgetProvider = "";
+                            info.itemType = LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP;
+                        }
+                        
+                        info.cellY = listIdle.get(countLinuxApp).y;
+                        info.cellX = listIdle.get(countLinuxApp).x;
+                        Log.d(TAG, "refreshDesktopFiles: addLinuxApps files info.cellX  "+info.cellX + " ,info.cellY: "+info.cellY + " ,info.title: "+info.title  + ",info.id "+info.id + ",IsAndroidApp: "+IsAndroidApp + ",countLinuxApp "+countLinuxApp);
+
+                        // index++;
+                        countLinuxApp++;
+                        mNewShortcutItems.add(info);
+                    }
+                }
+                addDesktopFiles(countLinuxApp, listIdle); //
+                return 1;
+            }else{
+                addDesktopFiles(0,null);
+            }
+        }catch(Exception e){
+            Log.e(TAG,"e :"+e.toString());
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public static Map<String,Object> getDesktopMap(String name ){
+        Map<String,Object> mp = null ;
+        if(FileUtils.isOpenAppFusion()){
+            if (listDeskTopLinux != null) {
+                Optional<Map<String, Object>> result = listDeskTopLinux.stream()
+                        .filter(item -> name.equals(item.get("FileName")))
+                        .findFirst();
+
+                if (result.isPresent()) {
+                    mp = result.get();
+                }
+        }
+        }else{
+            if(listDeskTopAndroid !=null){
+                String packageName = name.replaceAll("_fde.desktop", "");
+                Optional<Map<String, Object>> result = listDeskTopAndroid.stream()
+                        .filter(item -> packageName.equals(item.get("packageName").toString()))
+                        .findFirst();
+
+                if (result.isPresent()) {
+                    mp = result.get();
+                }
+            }
+        }
+        return mp ;
+    }
+
+
+
+    private synchronized void insertOrUpdateFavorites(ItemInfo info){
+        getModelWriter().addOrMoveItemInDatabase(info,LauncherSettings.Favorites.CONTAINER_DESKTOP,0,info.cellX,info.cellY);
+    }
+    
+
+    public void deleteFavorites(ItemInfo info){
+        getModelWriter().deleteItemFromDatabase(info,"");
+    }
+
+
+    public void bindWorkspace(){
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                getModel().startLoader("");
+            }
+        }, 100 * 1);
+    }
+
+    public void refresh(){
+        // android.os.Process.killProcess(android.os.Process.myPid());
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
+            return addDesktopFiles(0,null);
+        }, executorService);
+
+        future.thenAccept(result -> {
+            Log.d(TAG, "result  "+result );
+            executorService.shutdown();
+            if(1 == result){
+                try{
+                    ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+                     List<ActivityManager.RunningTaskInfo> ts = activityManager.getRunningTasks(1);
+                    if (!ts.isEmpty()) {
+                        ComponentName topActivity = ts.get(0).topActivity;
+                        String topActivityStr = topActivity.getClassName();
+                        if(topActivityStr.contains("com.android.launcher3")){
+                            List<ActivityManager.AppTask> tasks = activityManager.getAppTasks();
+                            tasks.get(0).finishAndRemoveTask();
+                        }else{
+                            bindForceWorkspace();
+                        }                
+                    }
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void rearray(Context context,String type){
+        // List<ItemInfo> rearray = getModel().rearray(context,type);
+        // List<ItemInfo> rearrayList = new ArrayList<>();
+        // for (int i = 0 ; i < rearray.size() ; i++){
+        //     ItemInfo info = rearray.get(i);
+        //     rearrayList.add(info);
+        //     getModelWriter().modifyItemInDatabase(info, LauncherSettings.Favorites.CONTAINER_DESKTOP, 0,
+        //             info.cellX, info.cellY, info.spanX, info.spanY);
+        // }
+        // bindItems(rearrayList, false);        
+    }
+
+    public  ItemInfo findNextCoordinate(ItemInfo item) {
+        int xindex = item.cellX;
+        int yindex = item.cellY ;
+        CellLayout cl = mWorkspace.getScreenWithId(item.screenId);
+        InvariantDeviceProfile idp = LauncherAppState.getIDP(Launcher.this);
+
+        if (cl != null && cl.isOccupied(xindex, yindex)) {
+            if(yindex >= idp.numRows ){
+                yindex = 0;
+                xindex++;
+            }else{
+                yindex++;
+            }
+            item.cellX = xindex;
+            item.cellY = yindex;
+            return findNextCoordinate(item);
+        }else{
+            return item ;
+        }
+    }
     /**
      * Only for use in tests, this API is only visible for LauncherQuickstep.
      */
@@ -2916,5 +3722,106 @@ public class Launcher extends StatefulActivity<LauncherState>
     public boolean isOnBackInvokedCallbackEnabled() {
         return false;
     }
-    // End of Getters and Setters
+
+    @Subscribe
+    public void onMessageEvent(MessageEvent event) {
+        String method = event.getMethod();
+        String message = event.getMessage() ;
+        Log.d(TAG," onMessageEvent message "+message + ",method "+method);
+
+        if(FileUtils.REMOVE_APP.equals(method)){
+            //如果是卸载则删除所有
+            if(FileUtils.isOpenAppFusion()){
+               List<Map<String, Object>> result = listDeskTopLinux.stream()
+                .filter(map -> map.get("Path").toString().contains(message))
+                .collect(Collectors.toList());
+                result.forEach(
+                    map ->{
+                        String fileName = map.get("FileName").toString();
+                        gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_DESKTOP+""+fileName);
+                    }
+                );
+                SPUtils.putUserInfo(Launcher.this,message, "");
+            }else{
+                String fileName = message + "_fde.desktop";
+                DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fileName);
+                gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_TEMP+""+fileName);
+                bindForceWorkspace();
+            }
+
+            //
+        // }else if("requestFocus".equals(method)){
+        //     mOverviewPanel.requestFocus();
+        }else if(FileUtils.RELOAD_APP.equals(method)){
+            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                   refreshLinuxApps(Launcher.this);
+                }
+            }, ON_ACTIVITY_RESULT_ANIMATION_DELAY * 6);
+        }else if(FileUtils.REFRESH_APP.equals(method)){
+            refresh();
+        }else if(FileUtils.INSERT_APP.equals(method)){
+            //if app_fusion close
+            String packageName = message.split("###")[0];
+            addShortCut(packageName);
+        }else{
+            gotoDocApp(method,message);
+        }
+    }
+
+    private void initFde(){
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                   if("0".equals(FileUtils.getSystemProperty(FileUtils.FDE_INIT_DONE, "0"))){
+                        String packageName = getString(R.string.download_package_name);
+                        boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
+                        if(isAppInstalled){
+                            FileUtils.createAllAndroidIconToLinux(Launcher.this,packageName);
+                            FileUtils.createLinuxDesktopFile(Launcher.this,getString(R.string.download_name),packageName);
+                            if(FileUtils.isOpenAppFusion()){
+
+                            }else{
+                                addShortCut(packageName);
+                            }
+                           
+                        }
+                        FileUtils.setSystemProperty(FileUtils.FDE_INIT_DONE, "1");
+                    }
+                }
+            }, ON_ACTIVITY_RESULT_ANIMATION_DELAY * 20);
+
+    }
+
+    private void addShortCut(String packageName ){
+        new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String fileName = packageName + "_fde.desktop";
+                    List<Map<String,Object>> list = DbUtils.queryItemsFromDatabase(getModel().getModelDbController(),fileName);
+                    if(list != null){
+                        return ;
+                    }
+                    List<Point> listIdle = FileUtils.getAllIdlePoints(Launcher.this,getModel().getModelDbController());
+                    WorkspaceItemInfo info = new WorkspaceItemInfo();
+                    info.title = fileName;
+                    info.container = -100;
+                    info.screenId = 0;
+                    Intent intent = new Intent();
+                    intent.putExtra("App", fileName);
+                    intent.putExtra("Path", "");
+                    intent.putExtra("packageName", packageName);
+                    intent.setPackage(getPackageName());
+                    info.intent = intent;
+                    info.mComponentName = new ComponentName(packageName,packageName+".MainActivity");
+                    info.appWidgetProvider = packageName;
+                    info.itemType = LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP;
+                    info.cellY = listIdle.get(0).y;
+                    info.cellX = listIdle.get(0).x;
+                    insertOrUpdateFavorites(info);
+                    // EventBus.getDefault().post(new MessageEvent(FileUtils.REFRESH_APP, packageName));
+                }
+            }).start();
+    }
 }

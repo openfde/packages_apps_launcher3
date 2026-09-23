@@ -64,7 +64,14 @@ class ItemInflater<T>(
         val parent = nullableParent ?: defaultParent
         if (item is ItemViewProvider) return item.inflateView(context, parent)
         return when (item.itemType) {
+            Favorites.ITEM_TYPE_DIRECTORY,
+            Favorites.ITEM_TYPE_DOCUMENT,
+            Favorites.ITEM_TYPE_LINUX_APP,
             Favorites.ITEM_TYPE_APPLICATION,
+            Favorites.ITEM_TYPE_ANDROID_APP,
+            Favorites.ITEM_TYPE_DOCUMENT,
+            Favorites.ITEM_TYPE_DIRECTORY,
+            Favorites.ITEM_TYPE_LINUX_APP,
             Favorites.ITEM_TYPE_DEEP_SHORTCUT,
             Favorites.ITEM_TYPE_SEARCH_ACTION,
             Favorites.ITEM_TYPE_FILE_SYSTEM_FILE,
