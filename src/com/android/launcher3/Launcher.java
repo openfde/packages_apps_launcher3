@@ -237,6 +237,8 @@ import com.android.launcher3.util.ViewEx;
 import com.android.launcher3.util.WallpaperThemeManager;
 import com.android.launcher3.views.FloatingIconView;
 import com.android.launcher3.views.FloatingSurfaceView;
+import com.android.launcher3.views.OptionsPopupView;
+import com.android.launcher3.views.NewOptionsPopupWindow;
 import com.android.launcher3.views.ListenerView;
 import com.android.launcher3.views.ScrimView;
 import com.android.launcher3.views.UpdateDeferrableView;
@@ -343,6 +345,8 @@ public class Launcher extends StatefulActivity<LauncherState>
             "launcher.extra.EXCLUDE_CLOSE_WIDGET_PICKER";
 
     private StateManager<LauncherState, Launcher> mStateManager;
+
+    private NewOptionsPopupWindow newOptionsPopupWindow;
 
     private static final int ON_ACTIVITY_RESULT_ANIMATION_DELAY = 500;
 
@@ -590,7 +594,22 @@ public class Launcher extends StatefulActivity<LauncherState>
                     RuleController.parseRules(this, R.xml.split_configuration));
         }
         mStartupLatencyLogger.logEnd(LAUNCHER_LATENCY_STARTUP_ACTIVITY_ON_CREATE);
+
+        View popupView = LayoutInflater.from(this).inflate(R.layout.popup_layout, null);
+        newOptionsPopupWindow = new NewOptionsPopupWindow(popupView, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,this);
+        newOptionsPopupWindow.setWindowLayoutType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+
+
+        getContentResolver().registerContentObserver(Settings.System.getUriFor("dock_scale"), false, mDockObserver);
     }
+
+    private ContentObserver mDockObserver = new ContentObserver(
+            new Handler(Looper.getMainLooper())) {
+        @Override
+        public void onChange(boolean selfChange) {
+            refresh();
+        }
+    };
 
     @NonNull View getAccessibilityActionView() {
         return findViewById(R.id.accessibility_action_view);
@@ -2507,6 +2526,21 @@ public class Launcher extends StatefulActivity<LauncherState>
         );
     }
 
+
+    public void showPopWindowList(float x, float y){
+        if(newOptionsPopupWindow.isShowing()){
+            newOptionsPopupWindow.dismiss();
+        }   
+        newOptionsPopupWindow.setElevation(6f); 
+        newOptionsPopupWindow.showAtLocation(mScrimView, Gravity.NO_GRAVITY, (int)x, (int)y);
+    }
+
+    public void hidePopWindowList(){
+        if(newOptionsPopupWindow !=null){
+            newOptionsPopupWindow.dismiss();
+        }  
+    }
+
     @Override
     public boolean canUseMultipleShadesForPopup() {
         return getTopOpenViewWithType(this, TYPE_FOLDER) == null
@@ -3653,6 +3687,7 @@ public class Launcher extends StatefulActivity<LauncherState>
     }
 
     public void refresh(){
+        Log.d(TAG," refresh .........");
         // android.os.Process.killProcess(android.os.Process.myPid());
         ExecutorService executorService = Executors.newFixedThreadPool(1);
         CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
@@ -3799,6 +3834,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                 @Override
                 public void run() {
                     String fileName = packageName + "_fde.desktop";
+                    Log.d(TAG," addShortCut fileName "+fileName);
                     List<Map<String,Object>> list = DbUtils.queryItemsFromDatabase(getModel().getModelDbController(),fileName);
                     if(list != null){
                         return ;
@@ -3820,7 +3856,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                     info.cellY = listIdle.get(0).y;
                     info.cellX = listIdle.get(0).x;
                     insertOrUpdateFavorites(info);
-                    // EventBus.getDefault().post(new MessageEvent(FileUtils.REFRESH_APP, packageName));
+                    EventBus.getDefault().post(new MessageEvent(FileUtils.REFRESH_APP, packageName));
                 }
             }).start();
     }

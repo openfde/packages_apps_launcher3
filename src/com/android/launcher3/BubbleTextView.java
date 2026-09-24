@@ -221,6 +221,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     @ViewDebug.ExportedProperty(category = "launcher")
     private DotInfo mDotInfo;
     private final DotRenderer mDotRenderer;
+    private Locale mCurrentLocale;
+
     @ViewDebug.ExportedProperty(category = "launcher", deepExport = true)
     protected final DotRenderer.DrawParams mDotParams;
     private Animator mDotScaleAnim;
@@ -435,8 +437,13 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
                     .getIconState().getIconShapeInfo();
         }
 
+        mCurrentLocale = context.getResources().getConfiguration().locale;
+
         setEllipsize(TruncateAt.END);
         setAccessibilityDelegate(mActivity.getAccessibilityDelegate());
+        setTextAlpha(1f);
+        setSingleLine(false);
+        setMaxLines(2);
 
         setContainerTextVisibility(mDisplay != DISPLAY_TASKBAR);
     }
@@ -870,10 +877,54 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
     @UiThread
     public void applyLabel(ItemInfo info) {
-        applyLabel(info.title, info.contentDescription,
-                info instanceof ItemInfoWithIcon infoWithIcon
-                && infoWithIcon.isInactiveArchive(), info.isDisabled());
+        if(info.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP || info.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP ){
+            CharSequence label = info.title;       
+            Map<String, Object> appMap = Launcher.getDesktopMap(label.toString());
+            if (appMap != null) {
+                setAppName(label.toString(), appMap);
+            } else {
+                setTextContent(label.toString());
+            }
+                        
+        }else{
+            applyLabel(info.title, info.contentDescription,
+            info instanceof ItemInfoWithIcon infoWithIcon
+            && infoWithIcon.isInactiveArchive(), info.isDisabled());
+        }
+        
     }
+
+     private void setAppName(String label, Map<String, Object> appMap) {
+        String appName = appMap != null && appMap.get("Name") != null ? appMap.get("Name").toString() : label;
+        if (isCurrentLanguageEnglish()) {
+            setTextContent(appName);
+        } else {
+            String chineseName = appMap != null && appMap.get("ZhName") != null ? appMap.get("ZhName").toString() : null;
+            setTextContent(chineseName != null ? chineseName : appName);
+        }
+    }
+
+    protected boolean isCurrentLanguageEnglish() {
+        return mCurrentLocale.equals(Locale.US);
+    }
+
+    private void setTextContent(String content){
+         setText(content);
+    }
+
+    public void setTextVisibility(boolean visible) {
+        setTextAlpha(visible ? 1 : 0);
+    }
+
+    private void setTextAlpha(float alpha) {
+        // mTextAlpha = alpha;
+        if (mTextColorStateList != null) {
+            setTextColor(mTextColorStateList);
+        } else {
+            super.setTextColor(getModifiedColor());
+        }
+    }
+
 
     /**
      * Directly sets the item label, without applying the icon.
@@ -1299,8 +1350,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
                     setSingleLine(false);
                     setMaxLines(2);
                 } else {
-                    setSingleLine(true);
-                    setMaxLines(1);
+                    setSingleLine(false);
+                    setMaxLines(2);
                 }
             }
         }

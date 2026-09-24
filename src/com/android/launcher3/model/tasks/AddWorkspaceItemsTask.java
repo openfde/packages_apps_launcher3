@@ -116,6 +116,10 @@ public class AddWorkspaceItemsTask implements ModelUpdateTask {
                     continue;
                 }
 
+                String packageName = item.getTargetComponent() != null
+                ? item.getTargetComponent().getPackageName() : null;
+               
+                item.appWidgetProvider  = packageName ;
                 // Find appropriate space for the item.
                 WorkspaceItemCoordinates coords = mItemSpaceFinder.findSpaceForItem(addedItemsFinal,
                         item.spanX, item.spanY, excludedScreens);

@@ -95,6 +95,7 @@ constructor(
     var restoreFlag: Int = 0
 
     var user: UserHandle = Process.myUserHandle()
+    
 
     var launcherActivityInfo: LauncherActivityInfo? = null
         private set
@@ -106,6 +107,7 @@ constructor(
 
             // Load common properties.
             user = userManagerState.getUser(serialNumber)
+
             restoreFlag = restoreFlagOnDisk
         }
         return result
@@ -123,6 +125,7 @@ constructor(
         // Non-app shortcuts are only supported for current user.
         info.user = user
         info.itemType = itemType
+        info.appWidgetProvider = appWidgetProvider
         info.title = title
         // the fallback icon
         if (!loadIconFromDb(info)) {
@@ -191,6 +194,7 @@ constructor(
 
         info.contentDescription = iconCache.getUserBadgedLabel(info.title!!, info.user)
         info.itemType = itemType
+        info.appWidgetProvider = appWidgetProvider
         info.status = restoreFlag
         if (isArchived)
             info.runtimeStatusFlags = info.runtimeStatusFlags or ItemInfoWithIcon.FLAG_ARCHIVED

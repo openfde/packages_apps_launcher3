@@ -37,6 +37,14 @@ import com.android.launcher3.util.Executors;
 
 import java.util.Locale;
 
+import android.util.Log;
+import com.android.launcher3.util.FileUtils;
+import org.greenrobot.eventbus.EventBus;
+import com.android.launcher3.model.data.MessageEvent;
+import com.android.launcher3.model.data.ItemInfo;
+import android.os.Looper;
+import android.os.Handler;
+
 /**
  * BroadcastReceiver to handle session commit intent.
  */
@@ -46,10 +54,27 @@ public class SessionCommitReceiver extends BroadcastReceiver {
 
     // Preference key for automatically adding icon to homescreen.
     public static final String ADD_ICON_PREFERENCE_KEY = "pref_add_icon_to_home";
+    public static final String ACTION_SHORT_CUT = "com.android.launcher3.action.ADD_SHORT_CUT";
+
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Executors.MODEL_EXECUTOR.execute(() -> processIntent(context, intent));
+        String action = intent.getAction();
+        Log.d(LOG,"SessionCommitReceiver  action:"+action);
+        if(ACTION_SHORT_CUT.equals(action)){
+            String packageName = intent.getStringExtra("packageName");
+            String appName = intent.getStringExtra("appName");
+
+            FileUtils.createAllAndroidIconToLinux(context,packageName);
+            FileUtils.createLinuxDesktopFile(context,appName,packageName);
+            if(FileUtils.isOpenAppFusion()){
+                
+            }else{
+                EventBus.getDefault().post(new MessageEvent(FileUtils.INSERT_APP, packageName+"###"+appName));
+            }
+        }else{
+            //Executors.MODEL_EXECUTOR.execute(() -> processIntent(context, intent));
+        }
     }
 
     @WorkerThread

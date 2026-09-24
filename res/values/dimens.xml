@@ -318,7 +318,7 @@
     <!-- Deep shortcuts -->
     <dimen name="deep_shortcuts_elevation">2dp</dimen>
     <dimen name="bg_popup_padding">2dp</dimen>
-    <dimen name="bg_popup_item_width">216dp</dimen>
+    <dimen name="bg_popup_item_width">160dp</dimen>
     <dimen name="bg_popup_item_height">52dp</dimen>
     <dimen name="bg_popup_item_vertical_padding">12dp</dimen>
     <dimen name="pre_drag_view_scale">6dp</dimen>

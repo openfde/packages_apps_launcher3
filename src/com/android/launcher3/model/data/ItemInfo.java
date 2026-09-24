@@ -234,6 +234,8 @@ public class ItemInfo {
         contentDescription = info.contentDescription;
         mComponentName = info.getTargetComponent();
         mTargetActivityComponentName = info.mTargetActivityComponentName;
+        appWidgetProvider = info.appWidgetProvider;
+
     }
 
     @Nullable
@@ -304,7 +306,8 @@ public class ItemInfo {
                 .put(LauncherSettings.Favorites.CELLY, cellY)
                 .put(LauncherSettings.Favorites.SPANX, spanX)
                 .put(LauncherSettings.Favorites.SPANY, spanY)
-                .put(LauncherSettings.Favorites.RANK, rank);
+                .put(LauncherSettings.Favorites.RANK, rank)
+                .put(LauncherSettings.Favorites.APPWIDGET_PROVIDER, appWidgetProvider);
     }
 
     public void readFromValues(@NonNull final ContentValues values) {
@@ -316,6 +319,7 @@ public class ItemInfo {
         spanX = values.getAsInteger(LauncherSettings.Favorites.SPANX);
         spanY = values.getAsInteger(LauncherSettings.Favorites.SPANY);
         rank = values.getAsInteger(LauncherSettings.Favorites.RANK);
+        appWidgetProvider = values.getAsString(LauncherSettings.Favorites.APPWIDGET_PROVIDER);
     }
 
     /**
@@ -341,6 +345,7 @@ public class ItemInfo {
     protected String dumpProperties() {
         return "id=" + id
                 + " type=" + LauncherSettings.Favorites.itemTypeToString(itemType)
+                + " appWidgetProvider=" + appWidgetProvider
                 + " container=" + getContainerInfo()
                 + " targetComponent=" + getTargetComponent()
                 + " ResolvedTargetInfo=" + getResolvedTargetInfo()

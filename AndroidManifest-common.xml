@@ -81,6 +81,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.content.pm.action.SESSION_COMMITTED" />
+                <action android:name="com.android.launcher3.action.ADD_SHORT_CUT" />
             </intent-filter>
         </receiver>
 
