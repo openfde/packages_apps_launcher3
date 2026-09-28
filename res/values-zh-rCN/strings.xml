@@ -275,4 +275,55 @@
     <string name="organizer_create_screen_title" msgid="1052454457895703433">"创建屏幕"</string>
     <string name="organizer_create_screen_description" msgid="3224132391919219061">"选择一个类别，以便从手机添加应用和微件"</string>
     <string name="organizer_choose_layout_title" msgid="127228966942084947">"选择布局"</string>
+
+    <string name="app_open_drop_target_label" >"打开"</string>
+    <string name="app_open_type" >"打开方式"</string>
+    <string name="remove_drop_target">"移除"</string>
+    <string name="copy_drop_target">"复制"</string>
+    <string name="cut_drop_target">"剪切"</string>
+    <string name="delete_drop_target">"删除"</string>
+    <string name="rename_drop_target">"重命名"</string>
+
+    <string name="desktop_icon_rearray">"自动排列"</string>
+    <string name="desktop_new">"新建"</string>
+    <string name="desktop_new_document">"新建文本文档"</string>
+    <string name="desktop_new_directory">"新建文件夹"</string>
+    <string name="desktop_new_paste">"粘贴"</string>
+    <string name="desktop_tips">"提示"</string>
+    <string name="app_not_install">"应用未安装,是否删除图标？"</string>
+    <string name="desktop_delete_tips">"是否删除？"</string>
+    <string name="desktop_delete">"删除"</string>
+    <string name="desktop_cancel">"取消"</string>
+    <string name="desktop_ok">"确定"</string>
+    <string name="desktop_rename">"重命名"</string>
+
+    <string name="change_wallpaper">"更换壁纸"</string>
+    <string name="display_properties">"显示属性"</string>
+    <string name="display_settings">"显示设置"</string>
+    <string name="system_theme">"系统主题"</string>
+    <string name="view_type">"视图类型"</string>
+    <string name="refresh">"刷新"</string>
+    <string name="sort">"排序方式"</string>
+    <string name="open_the_terminal">"打开终端"</string>
+    <string name="theme_dark">"深色"</string>
+    <string name="theme_light">"浅色"</string>
+    <string name="sort_by_name">"名称"</string>
+    <string name="sort_by_type">"类型"</string>
+
+     <!-- 定义字符串数组 -->
+    <string-array name="theme_options">
+        <item>深色模式</item>
+        <item>浅色模式</item>
+    </string-array>
+
+    <string-array name="sort_options">
+        <item>名称</item>
+        <item>类型</item>
+        <item>时间</item>
+    </string-array>
+
+    <string-array name="file_options">
+        <item>文件夹</item>
+        <item>文本文档</item>
+    </string-array>
 </resources>
