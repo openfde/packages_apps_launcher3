@@ -89,6 +89,12 @@ import static com.android.launcher3.model.ItemInstallQueue.FLAG_DRAG_AND_DROP;
 import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_NOT_PINNABLE;
 import static com.android.launcher3.popup.SystemShortcut.ADD_TO_HOME_SCREEN;
 import static com.android.launcher3.popup.SystemShortcut.APP_INFO;
+import static com.android.launcher3.popup.SystemShortcut.APP_OPEN;
+import static com.android.launcher3.popup.SystemShortcut.APP_OPEN_TYPE;
+import static com.android.launcher3.popup.SystemShortcut.APP_COPY;
+import static com.android.launcher3.popup.SystemShortcut.APP_CUT;
+import static com.android.launcher3.popup.SystemShortcut.APP_REMOVE;
+import static com.android.launcher3.popup.SystemShortcut.APP_RENAME;
 import static com.android.launcher3.popup.SystemShortcut.INSTALL;
 import static com.android.launcher3.popup.SystemShortcut.REMOVE;
 import static com.android.launcher3.popup.SystemShortcut.WIDGETS;
@@ -269,6 +275,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+
 import com.android.documentsui.IDocAidlInterface;
 import com.android.documentsui.IDataChangedCallback;
 import android.content.ServiceConnection;
@@ -2906,20 +2914,28 @@ public class Launcher extends StatefulActivity<LauncherState>
      * @return a stream of supported system shortcuts.
      */
     public Stream<SystemShortcut.Factory> getSupportedShortcuts(ItemInfo itemInfo) {
-        int container = itemInfo.container;
-        if (container == CONTAINER_DESKTOP || container == CONTAINER_HOTSEAT) {
-            return Stream.of(APP_INFO, WIDGETS, INSTALL, REMOVE);
-        } else if (container == CONTAINER_ALL_APPS || container == CONTAINER_ALL_APPS_PREDICTION) {
-            // TODO(b/444744861): Update private space apps to have its own container.
-            boolean isPinnable = itemInfo instanceof ItemInfoWithIcon info
-                    && (info.runtimeStatusFlags & FLAG_NOT_PINNABLE) == 0;
-            if (isPinnable) {
-                return Stream.of(APP_INFO, WIDGETS, INSTALL, ADD_TO_HOME_SCREEN);
-            } else {
-                return Stream.of(APP_INFO, WIDGETS, INSTALL);
-            }
+        // int container = itemInfo.container;
+        // if (container == CONTAINER_DESKTOP || container == CONTAINER_HOTSEAT) {
+        //     return Stream.of(APP_INFO, WIDGETS, INSTALL, REMOVE);
+        // } else if (container == CONTAINER_ALL_APPS || container == CONTAINER_ALL_APPS_PREDICTION) {
+        //     // TODO(b/444744861): Update private space apps to have its own container.
+        //     boolean isPinnable = itemInfo instanceof ItemInfoWithIcon info
+        //             && (info.runtimeStatusFlags & FLAG_NOT_PINNABLE) == 0;
+        //     if (isPinnable) {
+        //         return Stream.of(APP_INFO, WIDGETS, INSTALL, ADD_TO_HOME_SCREEN);
+        //     } else {
+        //         return Stream.of(APP_INFO, WIDGETS, INSTALL);
+        //     }
+        // }
+        // return Stream.of(APP_INFO, WIDGETS, INSTALL);
+        
+        if(itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY || itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT){
+            return Stream.of(APP_OPEN, APP_COPY,APP_CUT,APP_RENAME,APP_REMOVE, WIDGETS, INSTALL);
+        }else if(itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP || itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP ){
+            return Stream.of(APP_OPEN,APP_REMOVE);
+        }else{
+            return Stream.of(APP_OPEN, APP_REMOVE, WIDGETS, INSTALL);
         }
-        return Stream.of(APP_INFO, WIDGETS, INSTALL);
     }
 
     /**
@@ -3042,11 +3058,6 @@ public class Launcher extends StatefulActivity<LauncherState>
     }
     return null;
 }
-
-
-
-
-
 
 
 

@@ -744,6 +744,8 @@
     <string name="download_package_name">"com.tencent.android.qqdownloader"</string>
     <string name="download_name">"应用宝"</string>
 
+    <string name="app_open_drop_target_label" >open</string>
+
     <string-array name="theme_options">
         <item>Dark</item>
         <item>Light</item>

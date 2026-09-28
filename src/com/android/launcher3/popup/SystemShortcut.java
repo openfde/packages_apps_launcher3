@@ -31,6 +31,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.AbstractFloatingViewHelper;
 import com.android.launcher3.DropTargetHandler;
 import com.android.launcher3.Flags;
+import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherModel;
 import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
@@ -44,6 +45,11 @@ import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
 import com.android.launcher3.pm.UserCache;
+import com.android.launcher3.popup.SystemShortcut.AddToHomeScreen;
+import com.android.launcher3.popup.SystemShortcut.BubbleShortcut;
+import com.android.launcher3.popup.SystemShortcut.Install;
+import com.android.launcher3.popup.SystemShortcut.InstallToPrivateProfile;
+import com.android.launcher3.popup.SystemShortcut.Widgets;
 import com.android.launcher3.testing.shared.ResourceUtils;
 import com.android.launcher3.util.ActivityOptionsWrapper;
 import com.android.launcher3.util.ApiWrapper;
@@ -55,6 +61,15 @@ import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.Snackbar;
 import com.android.launcher3.widget.picker.model.data.WidgetPickerData;
 import com.android.wm.shell.shared.bubbles.logging.EntryPoint;
+import com.android.launcher3.touch.ItemClickHandler;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import com.android.launcher3.util.FileUtils;
+import android.view.Window;
+import android.view.WindowManager;
+import com.android.launcher3.popup.PopupContainerWithArrow;
+import android.view.Display;
+import android.view.WindowManager;
 
 import java.util.Arrays;
 
@@ -78,6 +93,9 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
     protected final ItemInfo mItemInfo;
     protected final View mOriginalView;
     public final boolean mIsCollapsible;
+
+    private static final int WINDOW_DELETE_WIDTH  = 320;
+    private static final int WINDOW_DELETE_HEIGHT  = 180;
 
     private final AbstractFloatingViewHelper mAbstractFloatingViewHelper;
 
@@ -191,6 +209,12 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
     }
 
     public static final Factory<ActivityContext> APP_INFO = AppInfo::new;
+    public static final Factory<ActivityContext> APP_OPEN = AppOpen::new;
+    public static final Factory<ActivityContext> APP_OPEN_TYPE = AppOpenType::new;
+    public static final Factory<ActivityContext> APP_COPY = AppCopy::new ;
+    public static final Factory<ActivityContext> APP_CUT = AppCut::new ;
+     public static final Factory<ActivityContext> APP_REMOVE = AppRemove::new;
+    public static final Factory<ActivityContext> APP_RENAME = AppRename::new ;
 
     public static class AppInfo<T extends ActivityContext> extends SystemShortcut<T> {
 
@@ -264,6 +288,144 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
             }
         }
     }
+
+
+     public static class AppOpen<T extends ActivityContext> extends SystemShortcut {
+
+        public AppOpen(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_open_app, R.string.app_open_drop_target_label, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+           dismissTaskMenuView();
+           ItemClickHandler.startAppShortcutOrInfoActivity(view, mItemInfo, Launcher.getLauncher(view.getContext()));
+        }
+    }
+
+    public static class AppOpenType<T extends ActivityContext> extends SystemShortcut {
+
+        public AppOpenType(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_open_type, R.string.app_open_type, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+           dismissTaskMenuView();
+           ItemClickHandler.appOpenLinuxType( Launcher.getLauncher(view.getContext()),mItemInfo);
+        }
+    }
+
+    public static class AppCopy<T extends ActivityContext> extends SystemShortcut {
+
+        public AppCopy(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_copy_no_shadow, R.string.copy_drop_target, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+           dismissTaskMenuView();
+           ItemClickHandler.copyFiletoClipboard( Launcher.getLauncher(view.getContext()),mItemInfo);
+        //    ItemClickHandler.startAppShortcutOrInfoActivity(view, mItemInfo, Launcher.getLauncher(view.getContext()), null);
+        }
+    }
+
+    public static class AppCut<T extends ActivityContext> extends SystemShortcut {
+
+        public AppCut(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_cut_no_shadow, R.string.cut_drop_target, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+           dismissTaskMenuView();
+           ItemClickHandler.cutFiletoClipboard( Launcher.getLauncher(view.getContext()),mItemInfo);
+        }
+    }
+
+    public static class AppRename<T extends ActivityContext> extends SystemShortcut {
+
+        public AppRename(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_rename_no_shadow, R.string.rename_drop_target, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+            dismissTaskMenuView();
+            ItemClickHandler.renameFiletoClipboard( Launcher.getLauncher(view.getContext()),mItemInfo);
+            // Launcher launcher = Launcher.getLauncher(view.getContext());
+           
+        }
+    }
+
+
+
+    public static class AppRemove<T extends ActivityContext> extends SystemShortcut {
+
+        public AppRemove(T target, ItemInfo itemInfo, View bubbleTextView) {
+            super(R.drawable.ic_remove_no_shadow, R.string.delete_drop_target, target,
+                    itemInfo, bubbleTextView);
+        }
+
+        @Override
+        public void onClick(View view) {
+            dismissTaskMenuView();
+            Launcher launcher = Launcher.getLauncher(view.getContext());
+            AlertDialog alertDialog = new AlertDialog.Builder(view.getContext(),R.style.RoundedAlertDialog)
+            .setTitle(R.string.desktop_tips)
+            .setMessage(R.string.desktop_delete_tips)
+            .setNegativeButton(R.string.desktop_cancel, null)
+            .setPositiveButton(R.string.desktop_delete, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    dialogInterface.dismiss();
+                    if(mItemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY || mItemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT  ||mItemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP){
+                        launcher.gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_DESKTOP+""+mItemInfo.title);
+                    }else {
+                        String packageName = null;
+                        if(mItemInfo.getTargetComponent() != null && mItemInfo.getTargetComponent().getPackageName() !=null){
+                            packageName = mItemInfo.getTargetComponent().getPackageName();    
+                        }else{
+                            packageName = FileUtils.getPackageNameByAppName(view.getContext(),mItemInfo.title.toString());
+                        }
+                        String fileName = mItemInfo.title.toString();
+                        if(packageName != null ){
+                            fileName = packageName+"_fde.desktop";
+                        }
+                        if(FileUtils.isOpenAppFusion()){
+                            launcher.gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_DESKTOP+fileName);
+                        }else{
+                            launcher.gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_TEMP+fileName);
+                        }
+                    }
+                    
+                    dismissTaskMenuView();
+                    launcher.removeItem(mOriginalView, mItemInfo,true);
+                    launcher.bindForceWorkspace();
+                }
+            }).create();
+            alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+
+            alertDialog.show();
+            Window window = alertDialog.getWindow();
+            WindowManager m = launcher.getWindowManager();
+            float scale = FileUtils.getDpiScale(launcher);
+            Display d = m.getDefaultDisplay();
+            if (window != null) {
+                WindowManager.LayoutParams params = window.getAttributes();
+                window.setLayout((int)(WINDOW_DELETE_WIDTH*scale), (int)(WINDOW_DELETE_HEIGHT*scale));
+                params.x = (int) (PopupContainerWithArrow.x - d.getWidth()/2);
+                params.y = (int ) (PopupContainerWithArrow.y - d.getHeight()/2);
+                window.setAttributes(params);
+            }
+            
+        }
+    }
+
 
     public static final Factory<ActivityContext> REMOVE = RemoveApp::new;
 

@@ -97,6 +97,20 @@ private constructor(
         itemDragHandler = popupItemDragHandler
     }
 
+    override fun onControllerInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            // Remember where the last touch happened, the delete confirmation window of
+            // SystemShortcut is shown around this point. Note that this must not be written as
+            // "x = ev.x", which would resolve to View.setX() and move the popup to the touch
+            // point instead.
+            Companion.x = ev.x
+            Companion.y = ev.y
+        }
+        // PopupContainer closes the popup when the touch is outside of it, so that tapping the
+        // empty space dismisses the popup instead of being handled by the workspace.
+        return super.onControllerInterceptTouchEvent(ev)
+    }
+
     fun configureForLauncher(launcher: Launcher, itemInfo: ItemInfo) {
         addOnAttachStateChangeListener(
             LauncherPopupLiveUpdateHandler(launcher, this as PopupContainerWithArrow<Launcher>)
@@ -413,6 +427,13 @@ private constructor(
     }
 
     companion object {
+
+        @JvmField
+        var x: Float = 0f
+
+        @JvmField
+        var y: Float = 0f
+
         private const val SHORTCUT_COLLAPSE_THRESHOLD = 6
 
         /** Returns true if we can show the container. */

@@ -129,6 +129,7 @@ import com.android.launcher3.Flags;
 import com.android.launcher3.GestureNavContract;
 import com.android.launcher3.InvariantDeviceProfile;
 import com.android.launcher3.Launcher;
+import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.LauncherSettings.Favorites;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.QuickstepAccessibilityDelegate;
@@ -263,6 +264,12 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import com.android.launcher3.model.data.MessageEvent;
 
+import static com.android.launcher3.popup.SystemShortcut.APP_OPEN;
+import static com.android.launcher3.popup.SystemShortcut.APP_OPEN_TYPE;
+import static com.android.launcher3.popup.SystemShortcut.APP_COPY;
+import static com.android.launcher3.popup.SystemShortcut.APP_CUT;
+import static com.android.launcher3.popup.SystemShortcut.APP_REMOVE;
+import static com.android.launcher3.popup.SystemShortcut.APP_RENAME;
 
 public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         SystemShortcut.BubbleActivityStarter {
@@ -576,44 +583,53 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     @Override
     public Stream<SystemShortcut.Factory> getSupportedShortcuts(ItemInfo itemInfo) {
         // Order matters as it affects order of appearance in popup container
-        List<SystemShortcut.Factory> shortcuts = new ArrayList(Arrays.asList(
-                APP_INFO, WellbeingModel.SHORTCUT_FACTORY, mHotseatPredictionController));
-        int container = itemInfo.container;
-        if (canPinAppWithContextMenu()
-                && DisplayController.getInfo(this).getShowDesktopTaskbarForFreeformDisplay()
-                && canContainerHavePinContextMenu(container)) {
-            TaskbarInteractor ti = mTaskbarInteractor;
-            int maxPinnableCount = ti != null ? ti.getMaxPinnableCount() : -1;
-            boolean supportPinAppsOverflow = ti != null && ti.getSupportsPinnedAppsOverflow();
-            shortcuts.add(
-                    0, getPinShortcutFactoryFromLauncher(maxPinnableCount, supportPinAppsOverflow));
+        // List<SystemShortcut.Factory> shortcuts = new ArrayList(Arrays.asList(
+        //         APP_INFO, WellbeingModel.SHORTCUT_FACTORY, mHotseatPredictionController));
+        // int container = itemInfo.container;
+        // if (canPinAppWithContextMenu()
+        //         && DisplayController.getInfo(this).getShowDesktopTaskbarForFreeformDisplay()
+        //         && canContainerHavePinContextMenu(container)) {
+        //     TaskbarInteractor ti = mTaskbarInteractor;
+        //     int maxPinnableCount = ti != null ? ti.getMaxPinnableCount() : -1;
+        //     boolean supportPinAppsOverflow = ti != null && ti.getSupportsPinnedAppsOverflow();
+        //     shortcuts.add(
+        //             0, getPinShortcutFactoryFromLauncher(maxPinnableCount, supportPinAppsOverflow));
+        // }
+
+        // shortcuts.addAll(getSplitShortcuts());
+        // shortcuts.add(WIDGETS);
+        // shortcuts.add(INSTALL);
+        // // TODO(b/444744861): Update private space apps to have its own container.
+        // boolean isPinnable = itemInfo instanceof ItemInfoWithIcon info
+        //         && (info.runtimeStatusFlags & FLAG_NOT_PINNABLE) == 0;
+        // if (container == CONTAINER_HOTSEAT || container == CONTAINER_DESKTOP
+        //         || /* Folder */ container > 0) {
+        //     shortcuts.add(REMOVE);
+        // } else if (isPinnable && (container == CONTAINER_ALL_APPS
+        //         || container == CONTAINER_ALL_APPS_PREDICTION)) {
+        //     shortcuts.add(ADD_TO_HOME_SCREEN);
+        // }
+        // shortcuts.add(DONT_SUGGEST_APP);
+        // shortcuts.add(PRIVATE_PROFILE_INSTALL);
+        // if (Flags.enablePrivateSpace()) {
+        //     shortcuts.add(UNINSTALL_APP);
+        // }
+        // if (mBubbleFeatureConfig.areAppBubblesSupported()) {
+        //     shortcuts.add(BUBBLE_SHORTCUT);
+        // }
+        // if (android.security.Flags.appLockApis() && Flags.enableAppLockShortcut()) {
+        //     shortcuts.add(APP_LOCK);
+        // }
+        // return shortcuts.stream();
+
+        if(itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY || itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT){
+            return Stream.of(APP_OPEN, APP_COPY,APP_CUT,APP_RENAME,APP_REMOVE, WIDGETS, INSTALL);
+        }else if(itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP || itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP ){
+            return Stream.of(APP_OPEN,APP_REMOVE);
+        }else{
+            return Stream.of(APP_OPEN, APP_REMOVE, WIDGETS, INSTALL);
         }
 
-        shortcuts.addAll(getSplitShortcuts());
-        shortcuts.add(WIDGETS);
-        shortcuts.add(INSTALL);
-        // TODO(b/444744861): Update private space apps to have its own container.
-        boolean isPinnable = itemInfo instanceof ItemInfoWithIcon info
-                && (info.runtimeStatusFlags & FLAG_NOT_PINNABLE) == 0;
-        if (container == CONTAINER_HOTSEAT || container == CONTAINER_DESKTOP
-                || /* Folder */ container > 0) {
-            shortcuts.add(REMOVE);
-        } else if (isPinnable && (container == CONTAINER_ALL_APPS
-                || container == CONTAINER_ALL_APPS_PREDICTION)) {
-            shortcuts.add(ADD_TO_HOME_SCREEN);
-        }
-        shortcuts.add(DONT_SUGGEST_APP);
-        shortcuts.add(PRIVATE_PROFILE_INSTALL);
-        if (Flags.enablePrivateSpace()) {
-            shortcuts.add(UNINSTALL_APP);
-        }
-        if (mBubbleFeatureConfig.areAppBubblesSupported()) {
-            shortcuts.add(BUBBLE_SHORTCUT);
-        }
-        if (android.security.Flags.appLockApis() && Flags.enableAppLockShortcut()) {
-            shortcuts.add(APP_LOCK);
-        }
-        return shortcuts.stream();
     }
 
     private boolean canContainerHavePinContextMenu(int container) {

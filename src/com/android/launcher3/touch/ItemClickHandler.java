@@ -408,7 +408,93 @@ public class ItemClickHandler {
         startAppShortcutOrInfoActivity(v, shortcut, launcher);
     }
 
-    private static void startAppShortcutOrInfoActivity(View v, ItemInfo item, Launcher launcher) {
+
+    public static void appOpenLinuxType(Launcher launcher,ItemInfo item){
+        Map<String,Object> map = FileUtils.getLinuxDesktopFileContent(item.title.toString());
+        String name = map.get("name").toString();
+        String exec = map.get("exec").toString();
+        launcher.selectOpenType(name,exec,item.title.toString());
+   }
+
+    public static void copyFiletoClipboard(Launcher launcher,ItemInfo item){
+         if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY){
+            launcher.gotoDocApp(FileUtils.COPY_DIR,item.title.toString());
+         }else{
+            launcher.gotoDocApp(FileUtils.COPY_FILE,item.title.toString());
+         }
+    }
+
+    public static void cutFiletoClipboard(Launcher launcher,ItemInfo item){
+        if(item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY){
+           launcher.gotoDocApp(FileUtils.CUT_DIR,item.title.toString());
+        }else{
+           launcher.gotoDocApp(FileUtils.CUT_FILE,item.title.toString());
+        }
+   }
+
+   public static void renameFiletoClipboard(Launcher launcher,ItemInfo item){
+
+    // launcher.renameFile(item.title.toString());  
+
+    View customView = LayoutInflater.from(launcher).inflate(R.layout.custom_input_dialog_layout, null);
+    EditText editText = customView.findViewById(R.id.editText);
+    AlertDialog alertDialog = new AlertDialog.Builder(launcher,R.style.RoundedAlertDialog)
+    .setTitle(R.string.desktop_rename)
+    .setView(customView)
+    .setNegativeButton(R.string.desktop_cancel, null)
+    .setPositiveButton(R.string.desktop_ok, new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialogInterface, int i) {
+            dialogInterface.dismiss();
+            reNameFileName(editText,launcher,item);
+        }
+    }).create();
+
+    alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+    alertDialog.show();
+    
+    editText.setText(item.title.toString());
+    String text = editText.getText().toString();
+    int separatorIndex = text.lastIndexOf(".");
+    editText.requestFocus();
+    editText.setSelection(0,
+            (separatorIndex == -1 ) ? text.length() : separatorIndex);
+    editText.setOnEditorActionListener(
+                new TextView.OnEditorActionListener() {
+                    @Override
+                    public boolean onEditorAction(
+                            TextView view, int actionId, @Nullable KeyEvent event) {
+                        if ((actionId == EditorInfo.IME_ACTION_DONE) || (event != null
+                                && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                                && event.hasNoModifiers())) {
+                            alertDialog.dismiss();
+                            reNameFileName(editText,launcher,item);
+                        }
+                        return false;
+                    }
+                });
+    
+
+    Window window = alertDialog.getWindow();
+    WindowManager m = launcher.getWindowManager();
+    Display d = m.getDefaultDisplay();
+    float scale = FileUtils.getDpiScale(launcher);
+    if (window != null) {
+        WindowManager.LayoutParams params = window.getAttributes();
+        window.setLayout((int)(WINDOW_RENAME_WIDTH*scale), (int)(WINDOW_RENAME_HEIGHT*scale));
+        // params.x = (int) (v.getX() - d.getWidth()/2);
+        // params.y = (int ) (v.getY() - d.getHeight()/2);
+        window.setAttributes(params);
+    }
+}
+
+    private static void reNameFileName(EditText editText,Launcher launcher,ItemInfo item){
+        String newName = editText.getText().toString().trim();
+        if(!newName.equals("")){
+            launcher.gotoDocApp(FileUtils.RENAME_FILE,item.title.toString()+"###"+newName);
+        }
+    }
+
+    public static void startAppShortcutOrInfoActivity(View v, ItemInfo item, Launcher launcher) {
         TestLogging.recordEvent(
                 TestProtocol.SEQUENCE_MAIN, "start: startAppShortcutOrInfoActivity");
         Intent intent = item.getIntent();
