@@ -106,7 +106,7 @@ public class StatusBarTouchController implements TouchController {
             float dy = ev.getY() - mDownEvent.y;
             float dx = ev.getX() - mDownEvent.x;
             if (dy > mTouchSlop && dy > Math.abs(dx)) {
-                // FDE: 禁用桌面下滑拉出通知栏
+                // FDE: 禁用桌面下滑拉出通知
 //                if (!mEventDispatcher.hasConsumer()) {
 //                    mEventDispatcher.setConsumer(this::dispatchTouchEvent);
 //                }

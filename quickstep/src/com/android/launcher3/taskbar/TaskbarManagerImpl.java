@@ -445,6 +445,9 @@ public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
             // Hide the default taskbar (and its background) and let the plugin own the content.
             taskbar.getDragLayer().setVisibility(View.GONE);
             plugin.setup(rootLayout);
+            // fde: hand the last known icon tint to the plugin on (re)creation.
+            plugin.onNavButtonsDarkIntensityChanged(
+                    resource.getSharedState().navButtonsDarkIntensity);
         } else {
             // Plugin not loaded yet: keep the taskbar transparent/invisible instead of showing
             // the default white background.
@@ -1020,6 +1023,11 @@ public class TaskbarManagerImpl implements PluginListener<TaskbarPlugin> {
             TaskbarActivityContext taskbar = res.getTaskbar();
             if (taskbar != null) {
                 taskbar.onNavButtonsDarkIntensityChanged(darkIntensity);
+            }
+            // fde: keep the taskbar plugin in sync with the system bar icon tint.
+            TaskbarPlugin plugin = mTaskbarPlugin;
+            if (plugin != null) {
+                plugin.onNavButtonsDarkIntensityChanged(darkIntensity);
             }
         });
     }

@@ -44,6 +44,18 @@ public interface TaskbarPlugin extends Plugin {
     void setup(ViewGroup taskbarRoot);
 
     /**
+     * Called when the desired dark intensity of the system bar icons changes.
+     *
+     * <p>The value is piped in from SystemUI (see {@code
+     * com.android.systemui.shared.recents.ILauncherProxy#onNavButtonsDarkIntensityChanged}) and can
+     * be used by the plugin to keep its taskbar content readable against the background.
+     *
+     * @param darkIntensity 1 = dark icons (light background), 0 = light icons (dark background).
+     */
+    default void onNavButtonsDarkIntensityChanged(float darkIntensity) {
+    }
+
+    /**
      * Called when the plugin should release resources held for a previously set up taskbar.
      */
     default void teardown() {
