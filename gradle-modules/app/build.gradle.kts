@@ -54,6 +54,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = false
+        // src/com/android/documentsui/{IDocAidlInterface,IDataChangedCallback}.aidl are compiled by
+        // Soong (LauncherPluginLib, Android.bp: src/**/*.aidl). AGP needs the aidl feature enabled
+        // to generate the same interfaces, otherwise Launcher.java cannot resolve them.
+        aidl = true
     }
 
     sourceSets {
@@ -72,6 +76,8 @@ android {
                 )
             )
             res.setSrcDirs(listOf("$repoRoot/res"))
+            // AIDL sources sit next to the java sources, matching Soong's "src/**/*.aidl" filegroup.
+            aidl.setSrcDirs(listOf("$repoRoot/src"))
             manifest.srcFile("$repoRoot/gradle-modules/app/AndroidManifest.xml")
         }
         // quickstep/res overlays res/ (higher priority), matching Soong resource order.
@@ -152,6 +158,8 @@ dependencies {
     implementation(fileTree("$prebuilts/aars") { include("*.aar") })
 
     implementation("com.google.guava:guava:33.2.1-android")
+    // Soong static_libs "eventbus" (AOSP external/eventbus), used by the file-management feature.
+    implementation("org.greenrobot:eventbus:3.2.0")
     implementation(project(":widgetpicker"))
 
     implementation("com.google.dagger:dagger:2.60.1")

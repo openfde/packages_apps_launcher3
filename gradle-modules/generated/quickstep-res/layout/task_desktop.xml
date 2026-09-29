@@ -30,6 +30,16 @@
         android:id="@+id/icon"
         layout="@layout/icon_app_chip_view" />
 
+    <Button
+        android:id="@+id/close_button"
+        android:layout_width="wrap_content"
+        android:layout_gravity="end|top"
+        android:layout_height="wrap_content"
+        android:clipToOutline="true"
+        android:background="@null"
+        android:text="@string/taskbar_edu_close"
+        />
+
     <com.android.quickstep.views.DesktopTaskContentView
         android:id="@+id/desktop_content"
         android:layout_width="match_parent"
