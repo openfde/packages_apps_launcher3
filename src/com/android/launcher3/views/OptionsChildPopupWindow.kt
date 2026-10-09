@@ -62,7 +62,6 @@ class OptionsChildPopupWindow(
                uiModeManager?.setNightModeActivated(false);
             }else if(res.getStringArray(R.array.sort_options).get(0).equals(name)){
                // sort by name
-               launcher.bindWorkspace();   
                launcher.rearray(view.getContext(),"title");
             }else if(res.getStringArray(R.array.sort_options).get(1).equals(name)){
                 // sort by type

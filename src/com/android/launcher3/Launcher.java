@@ -3730,15 +3730,16 @@ public class Launcher extends StatefulActivity<LauncherState>
     }
 
     public void rearray(Context context,String type){
-        // List<ItemInfo> rearray = getModel().rearray(context,type);
-        // List<ItemInfo> rearrayList = new ArrayList<>();
-        // for (int i = 0 ; i < rearray.size() ; i++){
-        //     ItemInfo info = rearray.get(i);
-        //     rearrayList.add(info);
-        //     getModelWriter().modifyItemInDatabase(info, LauncherSettings.Favorites.CONTAINER_DESKTOP, 0,
-        //             info.cellX, info.cellY, info.spanX, info.spanY);
-        // }
-        // bindItems(rearrayList, false);        
+        List<ItemInfo> rearrayList = getModel().rearray(context,type);
+        if (rearrayList == null) {
+            return;
+        }
+        for (int i = 0 ; i < rearrayList.size() ; i++){
+            ItemInfo info = rearrayList.get(i);
+            getModelWriter().modifyItemInDatabase(info, LauncherSettings.Favorites.CONTAINER_DESKTOP, 0,
+                    info.cellX, info.cellY, info.spanX, info.spanY);
+        }
+        bindWorkspace();
     }
 
     public  ItemInfo findNextCoordinate(ItemInfo item) {

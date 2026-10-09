@@ -46,8 +46,10 @@ import com.android.launcher3.model.tasks.CacheDataUpdatedTask
 import com.android.launcher3.pm.UserCache
 import com.android.launcher3.util.DaggerSingletonTracker
 import com.android.launcher3.util.Executors.MODEL_EXECUTOR
+import com.android.launcher3.util.FileUtils
 import com.android.launcher3.util.PackageUserKey
 import com.android.launcher3.views.ActivityContext
+import java.io.File
 import java.io.PrintWriter
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
@@ -198,97 +200,71 @@ constructor(
     /** Starts the loader, and returns a completion stage indicating when the loading is complete */
     fun startLoader(callerName: String): CompletionStage<Unit> = startLoader(callerName, arrayOf())
 
+    /**
+     * Rearranges the workspace (desktop) items based on the given [type].
+     *
+     * Supported types:
+     *  - "title": sorted by item title (case-insensitive)
+     *  - "itemType": sorted by [ItemInfo.itemType], then by title
+     *  - "time": sorted by the modified time of the underlying desktop file (newest first)
+     *
+     * The items are laid out column by column (matching the order used by [FileUtils.getAllIdlePoints]).
+     */
     fun rearray(context: Context, type: String): List<ItemInfo>? {
-        // synchronized(mLock) {
-        //     // Don't bother to start the thread if we know it's not going to do anything
-        //     val callbacksList = getCallbacks()
+        val workspaceItems = ArrayList<ItemInfo>()
+        mBgDataModel.itemsIdMap.forEach { info ->
+            if (info.container == LauncherSettings.Favorites.CONTAINER_DESKTOP) {
+                workspaceItems.add(info)
+            }
+        }
+        if (workspaceItems.isEmpty()) {
+            return null
+        }
 
-        //     if (callbacksList.isNotEmpty()) {
-        //         // Clear any pending bind-runnables from the synchronized load process.
-        //         // callbacksList.forEach {
-        //         //     mMainExecutor.execute(it::clearPendingBinds)
-        //         // }
+        when (type) {
+            "title" -> workspaceItems.sortWith { p1, p2 ->
+                val title1 = p1.title?.toString() ?: ""
+                val title2 = p2.title?.toString() ?: ""
+                title1.compareTo(title2, ignoreCase = true)
+            }
+            "itemType" -> workspaceItems.sortWith { p1, p2 ->
+                val itemTypeCompare = p1.itemType.compareTo(p2.itemType)
+                if (itemTypeCompare != 0) {
+                    itemTypeCompare
+                } else {
+                    val title1 = p1.title?.toString() ?: ""
+                    val title2 = p2.title?.toString() ?: ""
+                    title1.compareTo(title2, ignoreCase = true)
+                }
+            }
+            "time" -> workspaceItems.sortWith { p1, p2 ->
+                java.lang.Long.compare(getItemModifiedTime(p2), getItemModifiedTime(p1))
+            }
+        }
 
-        //         // If there is already one running, tell it to stop.
-        //         stopLoader()
+        val idp = LauncherAppState.getIDP(context)
+        val numRows = if (idp.numRows > 0) idp.numRows else 1
 
-        //         val tempItems = mBgDataModel.workspaceItems
-        //         val workspaceItems = ArrayList<ItemInfo>()
+        Log.i(TAG, "rearray type=$type items=${workspaceItems.size} numRows=$numRows numColumns=${idp.numColumns}")
 
-        //         for (ii in tempItems) {
-        //             if (ii.itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY ||
-        //                 ii.itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT
-        //             ) {
-        //                 // String documentId = FileUtils.getRootDir() + "/桌面/";
-        //                 var documentId = FileUtils.PATH_ID_DESKTOP
-        //                 var f = File(documentId + ii.title)
+        for (i in workspaceItems.indices) {
+            val info = workspaceItems[i]
+            info.screenId = 0
+            info.cellX = i / numRows
+            info.cellY = i % numRows
+        }
+        return workspaceItems
+    }
 
-        //                 if (f.exists()) {
-        //                     workspaceItems.add(ii)
-        //                 } else {
-        //                     documentId = FileUtils.getRootDir() + "/Desktop/"
-        //                     f = File(documentId + ii.title)
-
-        //                     if (f.exists()) {
-        //                         workspaceItems.add(ii)
-        //                     } else {
-        //                         Log.i( TAG,"workspaceItems.............not exist:" +ii.title +" ,  " + ii + ",documentId " +documentId)
-        //                     }
-        //                 }
-        //             } else {
-        //                 workspaceItems.add(ii)
-        //             }
-        //         }
-
-        //         mBgDataModel.workspaceItems = workspaceItems
-
-        //         if ("title" == type) {
-        //             workspaceItems.sortWith { p1, p2 ->
-        //                 p1.title.toString().compareTo(p2.title.toString())
-        //             }
-        //         } else if ("itemType" == type) {
-        //             workspaceItems.sortWith { p1, p2 ->
-        //                 val itemTypeCompare = p1.itemType.compareTo(p2.itemType)
-
-        //                 if (itemTypeCompare != 0) {
-        //                     itemTypeCompare
-        //                 } else {
-        //                     val title1 = p1.title?.toString() ?: ""
-        //                     val title2 = p2.title?.toString() ?: ""
-
-        //                     val ext1 = getFileExtension(title1)
-        //                     val ext2 = getFileExtension(title2)
-
-        //                     ext1.compareTo(ext2)
-        //                 }
-        //             }
-        //         } else {
-        //             workspaceItems.sortWith { p1, p2 ->
-        //                 p1.id.compareTo(p2.id)
-        //             }
-        //         }
-
-        //         val idp = LauncherAppState.getIDP(context)
-
-        //         Log.i(TAG,"workspaceItems.size ${workspaceItems.size}," +"idp.numRows: ${idp.numRows}," +"idp.numColumns: ${idp.numColumns}"
-        //         )
-
-        //         val launcher = Launcher.getLauncher(context)
-
-        //         for (i in workspaceItems.indices) {
-        //             val info = workspaceItems[i]
-
-        //             launcher.removeView(info.cellX, info.cellY)
-
-        //             info.cellX = i / idp.numRows
-        //             info.cellY = i % idp.numRows
-        //         }
-
-        //         return workspaceItems
-        //     }
-        // }
-
-        return null
+    private fun getItemModifiedTime(info: ItemInfo): Long {
+        val title = info.title?.toString()?.trim()
+        if (!title.isNullOrEmpty()) {
+            val file = File(FileUtils.PATH_ID_DESKTOP + title)
+            if (file.exists()) {
+                return file.lastModified()
+            }
+        }
+        return info.id.toLong()
     }
 
     private fun startLoader(
