@@ -18,11 +18,15 @@
 -keep class androidx.recyclerview.widget.RecyclerView { *; }
 
 # R8's -convertchecknotnull (build/make/core/proguard/checknotnull.flags) rewrites calls to
-# these null-check helpers and shrinks the now-unused methods. If a rewrite is missed (or a
-# stale dex is reused by an incremental build), the leftover invoke fails at runtime with:
-#   WorkspaceItemSerializer.<init> -> Intrinsics.checkNotNullParameter
-# Keep the methods so every call site always resolves.
--keep class kotlin.jvm.internal.Intrinsics { *; }
+# the Kotlin null-check helpers and shrinks the now-unused methods/classes away. Any code that
+# runs against this APK without going through the same R8 pass - e.g. Android Studio
+# "Apply Changes" dex overlays (code_cache/.overlay/...) or a debug build - then crashes at
+# startup with:
+#   WorkspaceItemSerializer.<init> -> Intrinsics.checkNotNullParameter (NoSuchMethodError)
+#   PredictorState.<init> -> kotlin.collections.CollectionsKt (NoClassDefFoundError)
+# Keep the whole Kotlin runtime so every call site always resolves.
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
 -keep class dagger.internal.Preconditions { *; }
 
 # Fragments
