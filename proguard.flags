@@ -17,6 +17,14 @@
 # support jar.
 -keep class androidx.recyclerview.widget.RecyclerView { *; }
 
+# R8's -convertchecknotnull (build/make/core/proguard/checknotnull.flags) rewrites calls to
+# these null-check helpers and shrinks the now-unused methods. If a rewrite is missed (or a
+# stale dex is reused by an incremental build), the leftover invoke fails at runtime with:
+#   WorkspaceItemSerializer.<init> -> Intrinsics.checkNotNullParameter
+# Keep the methods so every call site always resolves.
+-keep class kotlin.jvm.internal.Intrinsics { *; }
+-keep class dagger.internal.Preconditions { *; }
+
 # Fragments
 -keep class ** extends androidx.fragment.app.Fragment {
     public <init>(...);
