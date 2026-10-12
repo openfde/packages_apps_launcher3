@@ -60,8 +60,8 @@ public class PluginManagerWrapperImpl extends PluginManagerWrapper {
         // Otherwise getSharedPreferences() on credential-protected storage throws
         // IllegalStateException and crashes the launcher.
         mPluginManager = PluginManagerImpl.create(c.createDeviceProtectedStorageContext(),
-                Collections.emptyList(), mPluginEnabler, THREAD_POOL_EXECUTOR,
-                null /* preHandlerManager */);
+                Collections.singletonList("com.fde.taskplugin"), mPluginEnabler,
+                THREAD_POOL_EXECUTOR, null /* preHandlerManager */);
     }
 
     public PluginEnablerImpl getPluginEnabler() {
