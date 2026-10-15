@@ -25,6 +25,7 @@ import android.graphics.Point
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.util.Log
 import androidx.annotation.WorkerThread
 import com.android.launcher3.InvariantDeviceProfile
 import com.android.launcher3.LauncherSettings.Favorites
@@ -81,9 +82,14 @@ constructor(
             mainIcon = loadFullResIcon(iconCache, info.getActivityInfo(context))
         } else if (info.itemType == Favorites.ITEM_TYPE_APPLICATION) {
             val activityInfo =
-                context
-                    .getSystemService(LauncherApps::class.java)
-                    ?.resolveActivity(info.intent, info.user) ?: return null
+                runCatching {
+                    context
+                        .getSystemService(LauncherApps::class.java)
+                        ?.resolveActivity(info.intent, info.user)
+                }.getOrElse {
+                    Log.e(TAG, "Error resolving activity for ${info.user}", it)
+                    null
+                } ?: return null
             mainIcon =
                 if (
                     info is ItemInfoWithIcon && info.container == Favorites.CONTAINER_PRIVATESPACE
@@ -94,7 +100,12 @@ constructor(
                 }
         } else if (info.itemType == Favorites.ITEM_TYPE_DEEP_SHORTCUT) {
             val siList: List<ShortcutInfo> =
-                ShortcutKey.fromItemInfo(info).buildRequest(context).query(ShortcutRequest.ALL)
+                runCatching {
+                    ShortcutKey.fromItemInfo(info).buildRequest(context).query(ShortcutRequest.ALL)
+                }.getOrElse {
+                    Log.e(TAG, "Error querying deep shortcut for icon: ${info.user}", it)
+                    emptyList()
+                }
             if (siList.isEmpty()) {
                 return null
             } else {
@@ -156,4 +167,8 @@ constructor(
     }
 
     class Result(@JvmField val icon: AdaptiveIconDrawable, @JvmField val badge: Drawable)
+
+    companion object {
+        private const val TAG = "IconLoader"
+    }
 }

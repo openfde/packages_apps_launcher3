@@ -171,12 +171,28 @@ constructor(
                 is AppInfo,
                 is WorkspaceItemInfo ->
                     Supplier {
-                        getTitleAndIcon(info, lookupFlag)
+                        try {
+                            getTitleAndIcon(info, lookupFlag)
+                        } catch (e: Exception) {
+                            // Never let a single icon load failure crash the app. Fall back to the
+                            // default icon and keep the existing title if possible.
+                            Log.e(TAG, "Error loading icon in background for: $info", e)
+                            if (bitmapNeedsFallback(info.bitmap, info.user)) {
+                                info.bitmap = getDefaultIcon(info.user)
+                            }
+                        }
                         info
                     }
                 is PackageItemInfo ->
                     Supplier {
-                        getTitleAndIconForApp(info, lookupFlag)
+                        try {
+                            getTitleAndIconForApp(info, lookupFlag)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error loading icon in background for: $info", e)
+                            if (bitmapNeedsFallback(info.bitmap, info.user)) {
+                                info.bitmap = getDefaultIcon(info.user)
+                            }
+                        }
                         info
                     }
                 else -> {
@@ -207,6 +223,10 @@ constructor(
             Executors.MODEL_EXECUTOR.restorePriority(LooperExecutor.CALLER_ICON_CACHE)
         }
     }
+
+    /** Returns true if [bitmap] is so low-quality that it should be replaced by the default icon. */
+    private fun bitmapNeedsFallback(bitmap: BitmapInfo, user: UserHandle): Boolean =
+        bitmap === BitmapInfo.LOW_RES_INFO || isDefaultIcon(bitmap, user)
 
     /** Updates {@param application} only if a valid entry is found. */
     @Synchronized
@@ -263,20 +283,28 @@ constructor(
         lookupFlags: CacheLookupFlag,
     ) {
         val user = getUser(si)
-        var bitmapInfo =
-            cacheLocked(
-                    getComponent(si),
-                    user,
-                    { si },
-                    CacheableShortcutCachingLogic,
-                    lookupFlags.withSkipAddToMemCache(),
-                )
-                .bitmap
-        if (bitmapInfo.isLowRes) {
-            bitmapInfo = getDefaultIcon(user)
+        try {
+            var bitmapInfo =
+                cacheLocked(
+                        getComponent(si),
+                        user,
+                        { si },
+                        CacheableShortcutCachingLogic,
+                        lookupFlags.withSkipAddToMemCache(),
+                    )
+                    .bitmap
+            if (bitmapInfo.isLowRes) {
+                bitmapInfo = getDefaultIcon(user)
+            }
+            if (isDefaultIcon(bitmapInfo, user)) return
+            info.bitmap =
+                bitmapInfo.withBadgeInfo(getShortcutInfoBadge(si.shortcutInfo, lookupFlags))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading shortcut icon for: ${si.shortcutInfo.id}", e)
+            if (bitmapNeedsFallback(info.bitmap, info.user)) {
+                info.bitmap = getDefaultIcon(info.user)
+            }
         }
-        if (isDefaultIcon(bitmapInfo, user)) return
-        info.bitmap = bitmapInfo.withBadgeInfo(getShortcutInfoBadge(si.shortcutInfo, lookupFlags))
     }
 
     /** Returns the badging info for the shortcut */
@@ -323,41 +351,53 @@ constructor(
      */
     @Synchronized
     fun getTitleAndIcon(info: ItemInfoWithIcon, lookupFlag: CacheLookupFlag) {
-        if (info.isFileSystemItem()) {
-            val hsf = info.homeScreenFile
-            if (hsf == null) {
+        try {
+            if (info.isFileSystemItem()) {
+                val hsf = info.homeScreenFile
+                if (hsf == null) {
+                    info.bitmap = getDefaultIcon(info.user)
+                } else {
+                    val entry =
+                        cacheLocked(
+                            getComponent(hsf),
+                            info.user,
+                            { hsf },
+                            HomeScreenFilesCachingLogic,
+                            lookupFlag,
+                        )
+                    applyCacheEntry(entry, info)
+                }
+            } else if (info.itemType == Favorites.ITEM_TYPE_DEEP_SHORTCUT) {
+                val sk = ShortcutKey.fromItemInfo(info)
+                val si: ShortcutInfo =
+                    runCatching { sk.buildRequest(context).query(ShortcutRequest.ALL).getOrNull(0) }
+                        .onFailure { Log.e(TAG, "Error querying deep shortcut for icon: $sk", it) }
+                        .getOrNull() ?: return
+                getShortcutIcon(
+                    info,
+                    si,
+                    ApplicationInfoWrapper(context, si.getPackage(), si.userHandle),
+                    lookupFlag,
+                )
+            } else if (info.targetComponent == null) {
+                // null info means not installed, but if we have a component from the intent then
+                // we should still look in the cache for restored app icons.
                 info.bitmap = getDefaultIcon(info.user)
+                info.title = ""
+                info.contentDescription = ""
             } else {
-                val entry =
-                    cacheLocked(
-                        getComponent(hsf),
-                        info.user,
-                        { hsf },
-                        HomeScreenFilesCachingLogic,
-                        lookupFlag,
-                    )
-                applyCacheEntry(entry, info)
+                val intent = info.intent
+                getTitleAndIcon(info, lookupFlag.withUsePackageIcon()) {
+                    runCatching { launcherApps.resolveActivity(intent, info.user) }.getOrNull()
+                }
             }
-        } else if (info.itemType == Favorites.ITEM_TYPE_DEEP_SHORTCUT) {
-            val sk = ShortcutKey.fromItemInfo(info)
-            val si: ShortcutInfo =
-                sk.buildRequest(context).query(ShortcutRequest.ALL).getOrNull(0) ?: return
-            getShortcutIcon(
-                info,
-                si,
-                ApplicationInfoWrapper(context, si.getPackage(), si.userHandle),
-                lookupFlag,
-            )
-        } else if (info.targetComponent == null) {
-            // null info means not installed, but if we have a component from the intent then
-            // we should still look in the cache for restored app icons.
-            info.bitmap = getDefaultIcon(info.user)
-            info.title = ""
-            info.contentDescription = ""
-        } else {
-            val intent = info.intent
-            getTitleAndIcon(info, lookupFlag.withUsePackageIcon()) {
-                launcherApps.resolveActivity(intent, info.user)
+        } catch (e: Exception) {
+            // Never let a single icon load failure propagate and crash the caller (model thread,
+            // tasks, or background icon requests). Fall back to the default icon if nothing valid
+            // has been loaded.
+            Log.e(TAG, "Error loading icon for: $info", e)
+            if (bitmapNeedsFallback(info.bitmap, info.user)) {
+                info.bitmap = getDefaultIcon(info.user)
             }
         }
     }
@@ -395,61 +435,97 @@ constructor(
     }
 
     /**
-     * Creates an sql cursor for a query of a set of ItemInfoWithIcon icons and titles.
+     * Creates sql cursors for a query of a set of ItemInfoWithIcon icons and titles. The query is
+     * split into multiple cursors if necessary so that the number of bind arguments per query stays
+     * below the sqlite variable limit (SQLITE_MAX_VARIABLE_NUMBER). With many components a single
+     * oversized IN clause throws a SQLiteException, which silently disables bulk loading and forces
+     * a slow, per-item fallback for every requested icon.
      *
      * @param iconRequestInfos List of IconRequestInfos representing titles and icons to query.
      * @param user UserHandle all the given iconRequestInfos share
      * @param lookupFlag what flags to use when loading the icon.
      */
     @Throws(SQLiteException::class)
-    private fun <T : ItemInfoWithIcon> createBulkQueryCursor(
+    private fun <T : ItemInfoWithIcon> createBulkQueryPages(
         iconRequestInfos: List<IconRequestInfo<T>>,
         user: UserHandle,
         lookupFlag: CacheLookupFlag,
-    ): Cursor {
+    ): List<Cursor> {
         val distinctComponentNames =
             iconRequestInfos
                 .mapNotNull { it.itemInfo.targetComponent?.flattenToString() }
                 .distinct()
 
-        val queryParams = distinctComponentNames + listOf(getSerialNumberForUser(user).toString())
-        val componentNameQuery = Array(distinctComponentNames.size) { "?" }.joinToString(",")
+        val lookupColumns = lookupFlag.toLookupColumns()
+        if (distinctComponentNames.isEmpty()) {
+            // An empty IN clause generates invalid SQL; return an always-empty cursor instead.
+            return listOf(iconDb.query(lookupColumns, "0", null))
+        }
 
-        return iconDb.query(
-            lookupFlag.toLookupColumns(),
-            "$COLUMN_COMPONENT IN ( $componentNameQuery ) AND $COLUMN_USER = ?",
-            queryParams.toTypedArray(),
-        )
+        val userSerial = getSerialNumberForUser(user).toString()
+        val pages = ArrayList<Cursor>()
+        try {
+            for (chunk in distinctComponentNames.chunked(MAX_COMPONENTS_PER_BULK_QUERY)) {
+                val componentNameQuery = Array(chunk.size) { "?" }.joinToString(",")
+                val queryParams = (chunk + userSerial).toTypedArray()
+                pages.add(
+                    iconDb.query(
+                        lookupColumns,
+                        "$COLUMN_COMPONENT IN ( $componentNameQuery ) AND $COLUMN_USER = ?",
+                        queryParams,
+                    )
+                )
+            }
+            return pages
+        } catch (e: Exception) {
+            // Avoid leaking any cursors already opened in this batch.
+            pages.forEach { cursor -> runCatching { cursor.close() } }
+            throw e
+        }
     }
 
     /** Load and fill icons requested in iconRequestInfos using a single bulk sql query. */
     @Synchronized
     fun <T : ItemInfoWithIcon> getTitlesAndIconsInBulk(iconRequestInfos: List<IconRequestInfo<T>>) {
         Trace.beginSection("loadIconsInBulk")
-
-        iconRequestInfos
-            .filter {
-                if (it.itemInfo.targetComponent == null) {
-                    Log.i(TAG, "Skipping Item info with null component name: ${it.itemInfo}")
+        try {
+            iconRequestInfos
+                .filter {
+                    if (it.itemInfo.targetComponent == null) {
+                        Log.i(TAG, "Skipping Item info with null component name: ${it.itemInfo}")
+                        it.itemInfo.bitmap = getDefaultIcon(it.itemInfo.user)
+                        false
+                    } else if (it.itemInfo.itemType == ITEM_TYPE_DEEP_SHORTCUT) {
+                        // Filter out icons that should not share the same bitmap and title
+                        Log.e(
+                            TAG,
+                            "Skipping Item info for deep shortcut: ${it.itemInfo}",
+                            IllegalStateException(),
+                        )
+                        false
+                    } else true
+                }
+                .groupBy { BulkLookupKey(it.itemInfo.user, it.lookupFlag) }
+                .forEach { (bulkLookupKey, sectionRequestInfos) ->
+                    Trace.beginSection("loadIconSubsectionInBulk")
+                    try {
+                        loadIconSubsection(bulkLookupKey, sectionRequestInfos)
+                    } finally {
+                        Trace.endSection()
+                    }
+                }
+        } catch (e: Exception) {
+            // Never let a bulk icon load failure crash the model thread, which would leave the
+            // launcher stuck loading. Make sure every request still ends up with a visible icon.
+            Log.e(TAG, "Error loading icons in bulk", e)
+            iconRequestInfos.forEach {
+                if (it.itemInfo.bitmap === BitmapInfo.LOW_RES_INFO) {
                     it.itemInfo.bitmap = getDefaultIcon(it.itemInfo.user)
-                    false
-                } else if (it.itemInfo.itemType == ITEM_TYPE_DEEP_SHORTCUT) {
-                    // Filter out icons that should not share the same bitmap and title
-                    Log.e(
-                        TAG,
-                        "Skipping Item info for deep shortcut: ${it.itemInfo}",
-                        IllegalStateException(),
-                    )
-                    false
-                } else true
+                }
             }
-            .groupBy { BulkLookupKey(it.itemInfo.user, it.lookupFlag) }
-            .forEach { (bulkLookupKey, sectionRequestInfos) ->
-                Trace.beginSection("loadIconSubsectionInBulk")
-                loadIconSubsection(bulkLookupKey, sectionRequestInfos)
-                Trace.endSection()
-            }
-        Trace.endSection()
+        } finally {
+            Trace.endSection()
+        }
     }
 
     private fun <T : ItemInfoWithIcon> loadIconSubsection(
@@ -459,34 +535,45 @@ constructor(
         val duplicateIconRequestsMap = filteredList.groupBy { it.itemInfo.targetComponent!! }
         Trace.beginSection("loadIconSubsectionWithDatabase")
         try {
-            createBulkQueryCursor(filteredList, sectionKey.user, sectionKey.lookupFlag).use { c ->
-                // Database title and icon loading
-                val componentNameColumnIndex = c.getColumnIndexOrThrow(COLUMN_COMPONENT)
-                c.asSequence().forEach { _ ->
-                    val cn =
-                        ComponentName.unflattenFromString(c.getString(componentNameColumnIndex))
-                            ?: return@forEach
-                    val duplicateIconRequests = duplicateIconRequestsMap[cn]
-                    if (duplicateIconRequests == null) {
-                        Log.e(
-                            TAG,
-                            "Found entry in icon database but no main activity entry for cn: $cn",
-                        )
-                        return@forEach
-                    }
+            createBulkQueryPages(filteredList, sectionKey.user, sectionKey.lookupFlag)
+                .forEach { pageCursor ->
+                    pageCursor.use { c ->
+                        // Database title and icon loading
+                        val componentNameColumnIndex = c.getColumnIndexOrThrow(COLUMN_COMPONENT)
+                        c.asSequence().forEach { _ ->
+                            val cn =
+                                ComponentName.unflattenFromString(c.getString(componentNameColumnIndex))
+                                    ?: return@forEach
+                            val duplicateIconRequests = duplicateIconRequestsMap[cn]
+                            if (duplicateIconRequests == null) {
+                                Log.e(
+                                    TAG,
+                                    "Found entry in icon database but no main activity entry for cn: $cn",
+                                )
+                                return@forEach
+                            }
 
-                    val entry =
-                        cacheLocked(
-                            cn,
-                            sectionKey.user,
-                            { duplicateIconRequests[0].launcherActivityInfo },
-                            LauncherActivityCachingLogic,
-                            sectionKey.lookupFlag,
-                            c,
-                        )
-                    duplicateIconRequests.forEach { applyCacheEntry(entry, it.itemInfo) }
+                            // A single failing row must not abort the whole bulk load (which would
+                            // leave all remaining icons on the slow fallback path) or crash the
+                            // model thread.
+                            val entry =
+                                runCatching {
+                                    cacheLocked(
+                                        cn,
+                                        sectionKey.user,
+                                        { duplicateIconRequests[0].launcherActivityInfo },
+                                        LauncherActivityCachingLogic,
+                                        sectionKey.lookupFlag,
+                                        c,
+                                    )
+                                }.getOrElse { e ->
+                                    Log.e(TAG, "Error loading icon from database for cn: $cn", e)
+                                    null
+                                } ?: return@forEach
+                            duplicateIconRequests.forEach { applyCacheEntry(entry, it.itemInfo) }
+                        }
+                    }
                 }
-            }
         } catch (e: SQLiteException) {
             Log.d(TAG, "Error reading icon cache", e)
         } finally {
@@ -518,19 +605,23 @@ constructor(
                 entry.bitmap = icon
                 entry.contentDescription = itemInfo.contentDescription ?: ""
 
-                if (loadFallbackIcon) {
-                    loadFallbackIcon(
-                        lai,
-                        entry,
-                        LauncherActivityCachingLogic,
-                        iconRequestInfo.lookupFlag.withUsePackageIcon(false),
-                        usePackageTitle = loadFallbackTitle,
-                        cn,
-                        sectionKey.user,
-                    )
-                }
-                if (loadFallbackTitle && TextUtils.isEmpty(entry.title) && lai != null) {
-                    loadFallbackTitle(lai, entry, LauncherActivityCachingLogic, sectionKey.user)
+                try {
+                    if (loadFallbackIcon) {
+                        loadFallbackIcon(
+                            lai,
+                            entry,
+                            LauncherActivityCachingLogic,
+                            iconRequestInfo.lookupFlag.withUsePackageIcon(false),
+                            usePackageTitle = loadFallbackTitle,
+                            cn,
+                            sectionKey.user,
+                        )
+                    }
+                    if (loadFallbackTitle && TextUtils.isEmpty(entry.title) && lai != null) {
+                        loadFallbackTitle(lai, entry, LauncherActivityCachingLogic, sectionKey.user)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in fallback icon loading for: $cn", e)
                 }
 
                 iconRequestInfos.forEach { applyCacheEntry(entry, it.itemInfo) }
@@ -635,5 +726,8 @@ constructor(
             "extra_shortcut_badge_override_package"
 
         private const val TAG = "Launcher.IconCache"
+
+        // Keep each bulk query comfortably below SQLITE_MAX_VARIABLE_NUMBER (999 by default).
+        private const val MAX_COMPONENTS_PER_BULK_QUERY = 800
     }
 }
