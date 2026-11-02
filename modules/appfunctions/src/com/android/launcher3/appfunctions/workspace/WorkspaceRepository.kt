@@ -77,6 +77,15 @@ interface WorkspaceTransaction {
     fun removeItem(target: RemoveItemParamsSpec): WorkspaceTransaction
 
     /**
+     * Queues a sort of all workspace items using the given sort mode. The sort is applied when the
+     * transaction is committed.
+     *
+     * @param sortBy The [SortModeSpec] defining the sort order to apply.
+     * @return This [WorkspaceTransaction] instance for chaining.
+     */
+    fun sortWorkspace(sortBy: SortModeSpec): WorkspaceTransaction
+
+    /**
      * Commits all the changes made in this transaction to the underlying model.
      *
      * @return The new, updated [WorkspaceSpec] after the transaction is complete.

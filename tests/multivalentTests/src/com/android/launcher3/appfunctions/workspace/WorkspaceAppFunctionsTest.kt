@@ -60,23 +60,74 @@ class WorkspaceAppFunctionsTest {
         assertThat(lastTransaction.lastRemovedTarget).isEqualTo(target)
     }
 
+    @Test
+    fun sortWorkspace_returnsSortedWorkspaceResponse(): Unit = runBlocking {
+        fakeWorkspaceRepository.workspace = WorkspaceSpec(
+            screens = listOf(
+                WorkspaceScreenSpec(
+                    items = listOf(
+                        WorkspaceItemSpec(
+                            x = 0,
+                            y = 1,
+                            packageName = "com.zebra",
+                            className = "com.zebra.Main",
+                            label = "Zebra",
+                        ),
+                        WorkspaceItemSpec(
+                            x = 1,
+                            y = 0,
+                            packageName = "com.apple",
+                            className = "com.apple.Main",
+                            label = "Apple",
+                        ),
+                    )
+                )
+            ),
+            hotseat = HotseatSpec(emptyList()),
+            rows = 4,
+            columns = 4,
+        )
+        val params = SortWorkspaceParamsSpec(SortModeSpec(SortModeSpec.NAME))
+        val response = workspaceAppFunctions.sortWorkspace(FakeAppFunctionContext(context), params)
+
+        assertThat(response.success).isTrue()
+        assertThat(response.proof).isEqualTo(Proof.SORT_WORKSPACE_PROOF)
+        // First item should now be "Apple" placed at cell (0,0) after re-packing.
+        val sortedItems = response.workspace.screens.flatMap { it.items }
+        assertThat(sortedItems.map { it.label }).containsExactly("Apple", "Zebra").inOrder()
+        assertThat(sortedItems[0].x).isEqualTo(0)
+        assertThat(sortedItems[0].y).isEqualTo(0)
+
+        val lastTransaction = fakeWorkspaceRepository.lastTransaction as FakeWorkspaceTransaction
+        assertThat(lastTransaction.lastSortMode).isEqualTo(params.sortBy)
+    }
+
+    @Test
+    fun sortWorkspace_invalidMode_returnsFailureWithInvalidParameters(): Unit = runBlocking {
+        val params = SortWorkspaceParamsSpec(SortModeSpec("RANDOM"))
+        val response = workspaceAppFunctions.sortWorkspace(FakeAppFunctionContext(context), params)
+
+        assertThat(response.success).isFalse()
+        assertThat(response.errorCode?.code).isEqualTo(ErrorCode.INVALID_PARAMETERS)
+        assertThat(response.proof).isEqualTo(Proof.SORT_WORKSPACE_PROOF)
+    }
+
     private class FakeWorkspaceRepository : WorkspaceRepository {
+        var workspace = WorkspaceSpec(
+            screens = listOf(
+                WorkspaceScreenSpec(
+                    items = listOf(
+                        WorkspaceItemSpec(x = 1, y = 2)
+                    )
+                )
+            ),
+            hotseat = HotseatSpec(listOf()),
+            rows = null,
+            columns = null,
+        )
         var lastTransaction: WorkspaceTransaction = FakeWorkspaceTransaction()
 
-        override suspend fun getWorkspace(): WorkspaceSpec {
-            return WorkspaceSpec(
-                screens = listOf(
-                    WorkspaceScreenSpec(
-                        items = listOf(
-                            WorkspaceItemSpec(x = 1, y = 2)
-                        )
-                    )
-                ),
-                hotseat = HotseatSpec(listOf()),
-                rows = null,
-                columns = null,
-            )
-        }
+        override suspend fun getWorkspace(): WorkspaceSpec = workspace
 
         override fun newTransaction(): WorkspaceTransaction {
             lastTransaction = FakeWorkspaceTransaction()
@@ -96,9 +147,15 @@ class WorkspaceAppFunctionsTest {
 
     private class FakeWorkspaceTransaction : WorkspaceTransaction {
         var lastRemovedTarget: RemoveItemParamsSpec? = null
+        var lastSortMode: SortModeSpec? = null
 
         override fun removeItem(target: RemoveItemParamsSpec): WorkspaceTransaction {
             lastRemovedTarget = target
+            return this
+        }
+
+        override fun sortWorkspace(sortBy: SortModeSpec): WorkspaceTransaction {
+            lastSortMode = sortBy
             return this
         }
 

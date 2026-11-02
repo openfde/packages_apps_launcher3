@@ -18,12 +18,16 @@ package com.android.launcher3.appfunctions.workspace
 
 import com.android.launcher3.appfunctions.workspace.WorkspaceAppFunctions.Proof
 import com.android.launcher3.appfunctions.workspace.validators.RemoveItemValidator
+import com.android.launcher3.appfunctions.workspace.validators.SortModeValidator
 import com.android.launcher3.appfunctions.workspace.validators.ValidationResult
 
 /**
  * Manages workspace mutations by validating requests before execution.
  */
-class WorkspaceMutationManager(private val repository: WorkspaceRepository) {
+class WorkspaceMutationManager(
+    private val repository: WorkspaceRepository,
+    private val sorter: WorkspaceSorter = WorkspaceSorter(),
+) {
 
     /**
      * Executes a remove item operation after validation.
@@ -61,6 +65,45 @@ class WorkspaceMutationManager(private val repository: WorkspaceRepository) {
                     resolvedItemIdentifier = null,
                     resolutionDetails = validationResult.resolutionDetails,
                     proof = Proof.REMOVE_ITEM_PROOF
+                )
+            }
+        }
+    }
+
+    /**
+     * Executes a workspace sort operation after validation.
+     *
+     * Sorts all desktop items using the requested [SortModeSpec], re-packs them across screens and
+     * commits the change via the repository. The sorted workspace is returned in the response.
+     *
+     * @param params Parameters for the sort operation.
+     * @return [SortWorkspaceResponse] containing the sorted workspace and a proof token.
+     */
+    suspend fun sortWorkspace(params: SortWorkspaceParamsSpec): SortWorkspaceResponse {
+        val validator = SortModeValidator(params)
+        return when (val validationResult = validator.validate()) {
+            is ValidationResult.Valid -> {
+                val workspace = repository.getWorkspace()
+                val sortedWorkspace = sorter.sortWorkspace(workspace, params.sortBy)
+                repository.newTransaction()
+                    .sortWorkspace(params.sortBy)
+                    .commit()
+                SortWorkspaceResponse(
+                    workspace = sortedWorkspace,
+                    success = true,
+                    message = "Workspace sorted by ${params.sortBy.mode.lowercase()}",
+                    errorCode = null,
+                    proof = Proof.SORT_WORKSPACE_PROOF
+                )
+            }
+
+            is ValidationResult.Invalid -> {
+                SortWorkspaceResponse(
+                    workspace = repository.getWorkspace(),
+                    success = false,
+                    message = validationResult.message,
+                    errorCode = validationResult.errorCode,
+                    proof = Proof.SORT_WORKSPACE_PROOF
                 )
             }
         }
