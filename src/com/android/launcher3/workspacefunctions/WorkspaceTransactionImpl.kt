@@ -17,6 +17,7 @@
 package com.android.launcher3.workspacefunctions
 
 import com.android.launcher3.appfunctions.workspace.RemoveItemParamsSpec
+import com.android.launcher3.appfunctions.workspace.SortModeSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceTransaction
 
@@ -30,6 +31,10 @@ import com.android.launcher3.appfunctions.workspace.WorkspaceTransaction
 class WorkspaceTransactionImpl : WorkspaceTransaction {
 
     override fun removeItem(target: RemoveItemParamsSpec): WorkspaceTransaction {
+        TODO("Not yet implemented")
+    }
+
+    override fun sortWorkspace(sortBy: SortModeSpec): WorkspaceTransaction {
         TODO("Not yet implemented")
     }
 

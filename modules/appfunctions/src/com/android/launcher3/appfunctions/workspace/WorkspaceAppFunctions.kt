@@ -102,6 +102,30 @@ class WorkspaceAppFunctions(
         return mutationManager.removeItem(target)
     }
 
+    /**
+     * Sorts all desktop items on the workspace.
+     *
+     * Supports sorting by:
+     * - Name ([SortModeSpec.NAME]): alphabetical, case-insensitive.
+     * - Type ([SortModeSpec.TYPE]): apps, then shortcuts, then folders, then widgets; alphabetical
+     *   within each group.
+     * - Time ([SortModeSpec.TIME]): by install time, newest first.
+     *
+     * Items are re-packed row-major (left to right, top to bottom) into the workspace screens using
+     * the workspace grid, honoring widget spans. The hotseat is left untouched.
+     *
+     * @param appFunctionContext App function context.
+     * @param params [SortWorkspaceParamsSpec] specifying the sort mode.
+     * @return [SortWorkspaceResponse] with the sorted workspace and a new proof.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun sortWorkspace(
+        appFunctionContext: AppFunctionContext,
+        params: SortWorkspaceParamsSpec,
+    ): SortWorkspaceResponse {
+        return mutationManager.sortWorkspace(params)
+    }
+
 
     /// Decorated responses to the AppFunction agents, the kdoc for these is used
     // as the raw documentation ingested by the agents.
@@ -159,6 +183,7 @@ class WorkspaceAppFunctions(
             val ALIGN_SCREEN_PROOF = Proof("m591")
             val ORGANIZE_SCREEN_PROOF = Proof("n76d")
             val GET_SCREEN_TEMPLATE_PROOF = Proof("p09a")
+            val SORT_WORKSPACE_PROOF = Proof("q2f4")
         }
     }
 }
