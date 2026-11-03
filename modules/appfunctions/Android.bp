@@ -48,6 +48,16 @@ android_library {
         "com.android.extensions.appfunctions.stubs",
     ],
     plugins: ["androidx.appfunctions_appfunctions-compiler-plugin"],
+    // Soong equivalent of gradle's `ksp { arg("appfunctions:aggregateAppFunctions", "true") }`.
+    // Makes the appfunctions KSP compiler ALSO run the aggregation pass, which generates the
+    // $AggregatedAppFunctionInventory_Impl / $AggregatedAppFunctionInvoker_Impl runtime classes
+    // (required by androidx.appfunctions.service) and the aggregate app_functions.xml / v2 XML
+    // assets read by the AppSearch indexer. Without this the Launcher3 functions are never
+    // registered and `cmd app_function list-app-functions` shows nothing.
+    // NOTE: 4 backslashes in Blueprint -> 2 in ninja -> 1 in argv, so the KSP option key is
+    // parsed as `appfunctions:aggregateAppFunctions` (the ':' must be escaped, otherwise the
+    // KSP client splits on ':' and the option is silently dropped).
+    annotation_processor_flags: ["appfunctions\\\\:aggregateAppFunctions=true"],
     kotlincflags: ["-Xjvm-default=all"],
     enable_ksp: true, // required for appfunctions
     optional_uses_libs: ["com.android.extensions.appfunctions"],
