@@ -24,6 +24,7 @@ import com.android.launcher3.appfunctions.workspace.UnplacedWidgetTypeTranslator
 import com.android.launcher3.appfunctions.workspace.WorkspaceSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceTypeTranslator
 import com.android.launcher3.appfunctions.workspace.provider.InstalledItemsProvider
+import com.android.launcher3.model.ModelWriterFactory
 import com.android.launcher3.model.data.WorkspaceData
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo
 import com.android.launcher3.workspacefunctions.translators.TranslatorRegistry
@@ -50,6 +51,7 @@ class WorkspaceRepositoryImplTest {
     private val unplacedAppTypeTranslator = mock<UnplacedAppTypeTranslator<LauncherActivityInfo>>()
     private val unplacedWidgetTypeTranslator =
         mock<UnplacedWidgetTypeTranslator<LauncherAppWidgetProviderInfo>>()
+    private val modelWriterFactory = mock<ModelWriterFactory>()
 
     private lateinit var translators: TranslatorRegistry
     private lateinit var repository: WorkspaceRepositoryImpl
@@ -86,7 +88,15 @@ class WorkspaceRepositoryImplTest {
                 installedAppsProvider,
                 installedWidgetsProvider,
                 translators,
+                modelWriterFactory,
             )
+    }
+
+    @Test
+    fun newTransaction_returnsTransaction() {
+        val transaction = repository.newTransaction()
+
+        assertThat(transaction).isInstanceOf(WorkspaceTransaction::class.java)
     }
 
     @Test

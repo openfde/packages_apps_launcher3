@@ -76,10 +76,12 @@ public class LauncherApplication extends Application implements AppFunctionConfi
     public AppFunctionConfiguration getAppFunctionConfiguration() {
         Log.d("LauncherApp", "getAppFunctionConfiguration");
         AppFunctionConfiguration.Builder builder = new AppFunctionConfiguration.Builder();
-        if (Flags.condoPlanner()) {
-            builder.addEnclosingClassFactory(WorkspaceAppFunctions.class,
-                    () -> getAppComponent().getWorkspaceAppFunctions());
-        }
+        // Always register the enclosing-class factory: WorkspaceAppFunctions has no public no-arg
+        // constructor (its repository is Dagger-provided), so without this the appfunctions runtime
+        // fails with code 3000 "Unable to instantiate class ...". This must not be gated behind the
+        // unrelated condo_planner experiment flag. Mirrors FDECuratedApps (DownloadApplication).
+        builder.addEnclosingClassFactory(WorkspaceAppFunctions.class,
+                () -> getAppComponent().getWorkspaceAppFunctions());
         return builder.build();
     }
 }

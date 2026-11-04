@@ -22,6 +22,7 @@ import com.android.launcher3.appfunctions.workspace.WorkspaceRepository
 import com.android.launcher3.appfunctions.workspace.WorkspaceSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceTransaction
 import com.android.launcher3.appfunctions.workspace.provider.InstalledItemsProvider
+import com.android.launcher3.model.ModelWriterFactory
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo
 import com.android.launcher3.workspacefunctions.translators.TranslatorRegistry
 import javax.inject.Inject
@@ -30,8 +31,8 @@ import javax.inject.Inject
  * The concrete implementation of the [WorkspaceRepository].
  *
  * This class acts as the bridge between the abstract AppFunctions API and the concrete launcher
- * model. It will use the [LauncherWorkspaceProvider] to read data and the `IModelWriter` (not yet
- * injected) to handle transactions.
+ * model. It uses the [LauncherWorkspaceProvider] to read data and the [ModelWriterFactory] to
+ * create the `IModelWriter` that handles transactions.
  */
 class WorkspaceRepositoryImpl
 @Inject
@@ -40,6 +41,7 @@ constructor(
     private val installedAppsProvider: InstalledItemsProvider<LauncherActivityInfo>,
     private val installedWidgetsProvider: InstalledItemsProvider<LauncherAppWidgetProviderInfo>,
     private val translators: TranslatorRegistry,
+    private val modelWriterFactory: ModelWriterFactory,
 ) : WorkspaceRepository {
 
     override suspend fun getWorkspace(): WorkspaceSpec {
@@ -57,7 +59,10 @@ constructor(
         return widgets.map { translators.translate(it) }
     }
 
-    override fun newTransaction(): WorkspaceTransaction {
-        TODO("Not yet implemented")
-    }
+    override fun newTransaction(): WorkspaceTransaction =
+        WorkspaceTransactionImpl(
+            workspaceProvider = workspaceProvider,
+            translators = translators,
+            modelWriterFactory = modelWriterFactory,
+        )
 }
