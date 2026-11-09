@@ -18,15 +18,22 @@ package com.android.launcher3.workspacefunctions.testing
 
 import com.android.launcher3.appfunctions.workspace.HotseatSpec
 import com.android.launcher3.appfunctions.workspace.RemoveItemParamsSpec
+import com.android.launcher3.appfunctions.workspace.SortModeSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceSpec
 import com.android.launcher3.appfunctions.workspace.WorkspaceTransaction
 
 class FakeWorkspaceTransaction : WorkspaceTransaction {
     var removeItemCalledWith: RemoveItemParamsSpec? = null
+    var sortWorkspaceCalledWith: SortModeSpec? = null
     var commitCalled = false
 
     override fun removeItem(target: RemoveItemParamsSpec): WorkspaceTransaction {
         removeItemCalledWith = target
+        return this
+    }
+
+    override fun sortWorkspace(sortBy: SortModeSpec): WorkspaceTransaction {
+        sortWorkspaceCalledWith = sortBy
         return this
     }
 

@@ -38,30 +38,38 @@ interface HotseatItemTranslator<T : ItemInfo> : Translator<ItemContext<T>, Hotse
 interface AppInFolderTranslator<T : ItemInfo> : Translator<T, AppInFolderSpec>
 
 /** Translates a [WorkspaceItemInfo] to a [WorkspaceItemSpec]. */
-class WorkspaceItemInfoWorkspaceTranslator @Inject constructor() :
+class WorkspaceItemInfoWorkspaceTranslator
+@Inject
+constructor(private val installTimeProvider: InstallTimeProvider) :
     WorkspaceItemTranslator<WorkspaceItemInfo> {
     override fun toSpec(obj: ItemContext<WorkspaceItemInfo>): WorkspaceItemSpec {
         val item = obj.item
+        val packageName = item.intent?.component?.packageName ?: item.intent?.`package`
         return WorkspaceItemSpec(
             x = item.cellX,
             y = item.cellY,
-            packageName = item.intent?.component?.packageName ?: item.intent?.`package`,
+            packageName = packageName,
             className = item.intent?.component?.className,
             label = item.title?.toString(),
             shortcutId = item.intent?.getStringExtra("shortcut_id"),
+            installTime = installTimeProvider.get(packageName),
         )
     }
 }
 
 /** Translates a [WorkspaceItemInfo] to a [HotseatItemSpec]. */
-class WorkspaceItemInfoHotseatTranslator @Inject constructor() :
+class WorkspaceItemInfoHotseatTranslator
+@Inject
+constructor(private val installTimeProvider: InstallTimeProvider) :
     HotseatItemTranslator<WorkspaceItemInfo> {
     override fun toSpec(obj: ItemContext<WorkspaceItemInfo>): HotseatItemSpec {
         val item = obj.item
+        val packageName = item.intent?.component?.packageName ?: item.intent?.`package`
         return HotseatItemSpec(
-            packageName = item.intent?.component?.packageName ?: item.intent?.`package`,
+            packageName = packageName,
             className = item.intent?.component?.className,
             label = item.title?.toString(),
+            installTime = installTimeProvider.get(packageName),
         )
     }
 }
@@ -79,7 +87,9 @@ class WorkspaceItemInfoAppInFolderTranslator @Inject constructor() :
 }
 
 /** Translates a [LauncherAppWidgetInfo] to a [WorkspaceItemSpec]. */
-class LauncherAppWidgetInfoWorkspaceTranslator @Inject constructor() :
+class LauncherAppWidgetInfoWorkspaceTranslator
+@Inject
+constructor(private val installTimeProvider: InstallTimeProvider) :
     WorkspaceItemTranslator<LauncherAppWidgetInfo> {
     override fun toSpec(obj: ItemContext<LauncherAppWidgetInfo>): WorkspaceItemSpec {
         val item = obj.item
@@ -90,6 +100,7 @@ class LauncherAppWidgetInfoWorkspaceTranslator @Inject constructor() :
             spanY = item.spanY,
             packageName = item.providerName.packageName,
             className = item.providerName.className,
+            installTime = installTimeProvider.get(item.providerName.packageName),
         )
     }
 }

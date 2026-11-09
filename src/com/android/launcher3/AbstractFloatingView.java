@@ -45,6 +45,8 @@ import com.android.launcher3.views.BaseDragLayer;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base class for a View which shows a floating UI on top of the launcher UI.
@@ -138,6 +140,44 @@ public abstract class AbstractFloatingView extends LinearLayout implements Touch
     public static final int TYPE_STATUS_BAR_SWIPE_DOWN_DISALLOW = TYPE_WIDGETS_BOTTOM_SHEET |
             TYPE_WIDGET_RESIZE_FRAME | TYPE_ON_BOARD_POPUP | TYPE_DISCOVERY_BOUNCE
             | TYPE_TASK_MENU | TYPE_DRAG_DROP_POPUP;
+
+    /**
+     * AbstractFloatingViews that are hosted in an overlay window (see
+     * {@code ArrowPopup#shouldUseOverlayWindow()}) instead of being a direct child of the drag
+     * layer, so that they are rendered above other applications' windows (e.g. freeform windows
+     * covering the launcher). They are kept in this registry so that the usual "find / close open
+     * floating views" helpers keep working while the view is not an actual drag layer child.
+     */
+    private static final List<AbstractFloatingView> sOverlayViews = new ArrayList<>();
+
+    /**
+     * Registers a floating view that is hosted in an overlay window (not a drag layer child).
+     */
+    public static void registerOverlayView(AbstractFloatingView view) {
+        synchronized (sOverlayViews) {
+            sOverlayViews.remove(view);
+            sOverlayViews.add(view);
+        }
+    }
+
+    /**
+     * Unregisters a floating view hosted in an overlay window.
+     */
+    public static void unregisterOverlayView(AbstractFloatingView view) {
+        synchronized (sOverlayViews) {
+            sOverlayViews.remove(view);
+        }
+    }
+
+    /**
+     * Returns the floating views currently hosted in overlay windows (registered via
+     * {@link #registerOverlayView(AbstractFloatingView)}).
+     */
+    public static List<AbstractFloatingView> getOverlayViews() {
+        synchronized (sOverlayViews) {
+            return new ArrayList<>(sOverlayViews);
+        }
+    }
 
     // Floating views that are exclusive to the taskbar overlay window.
     public static final int TYPE_TASKBAR_OVERLAYS =
@@ -257,14 +297,25 @@ public abstract class AbstractFloatingView extends LinearLayout implements Touch
     private static <T extends AbstractFloatingView> T getView(
             ActivityContext activity, @FloatingViewType int type, boolean mustBeOpen) {
         BaseDragLayer dragLayer = activity.getDragLayer();
-        if (dragLayer == null) return null;
-        // Iterate in reverse order. AbstractFloatingView is added later to the dragLayer,
-        // and will be one of the last views.
-        for (int i = dragLayer.getChildCount() - 1; i >= 0; i--) {
-            View child = dragLayer.getChildAt(i);
-            if (child instanceof AbstractFloatingView) {
-                AbstractFloatingView view = (AbstractFloatingView) child;
-                if (view.isOfType(type) && (!mustBeOpen || view.isOpen())) {
+        if (dragLayer != null) {
+            // Iterate in reverse order. AbstractFloatingView is added later to the dragLayer,
+            // and will be one of the last views.
+            for (int i = dragLayer.getChildCount() - 1; i >= 0; i--) {
+                View child = dragLayer.getChildAt(i);
+                if (child instanceof AbstractFloatingView) {
+                    AbstractFloatingView view = (AbstractFloatingView) child;
+                    if (view.isOfType(type) && (!mustBeOpen || view.isOpen())) {
+                        return (T) view;
+                    }
+                }
+            }
+        }
+        // Also check floating views hosted in overlay windows (not drag layer children).
+        synchronized (sOverlayViews) {
+            for (int i = sOverlayViews.size() - 1; i >= 0; i--) {
+                AbstractFloatingView view = sOverlayViews.get(i);
+                if (view.isOfType(type) && (!mustBeOpen || view.isOpen())
+                        && ActivityContext.lookupContextNoThrow(view.getContext()) == activity) {
                     return (T) view;
                 }
             }

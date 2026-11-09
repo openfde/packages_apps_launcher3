@@ -282,6 +282,10 @@
     <!-- Home screen files -->
     <color name="home_screen_files_folder_icon_color">@color/system_primary_light</color>
     <color name="menu_bg">#F9FAFC</color>
+
+    <!-- Desktop right-click menu -->
+    <color name="desktop_menu_text_enabled">#e6000000</color>
+    <color name="desktop_menu_text_disabled">#8C8C8C</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 </resources>

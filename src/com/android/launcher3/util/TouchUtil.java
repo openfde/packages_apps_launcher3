@@ -17,7 +17,7 @@ package com.android.launcher3.util;
 
 import android.view.InputDevice;
 import android.view.MotionEvent;
-
+import android.util.Log;
 import androidx.annotation.NonNull;
 
 /** Util class for touch event. */
@@ -31,6 +31,7 @@ public final class TouchUtil {
      * {@link MotionEvent#getButtonState()} returns 0 for any mouse button (right, middle, right).
      */
     public static boolean isMouseRightClickDownOrMove(@NonNull MotionEvent event) {
+         Log.d("CheckLongPressHelper","isMouseRightClickDownOrMove "+event.getAction());
         return event.isFromSource(InputDevice.SOURCE_MOUSE)
                 && ((event.getButtonState() & MotionEvent.BUTTON_SECONDARY) != 0);
     }

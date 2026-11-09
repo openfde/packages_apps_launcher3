@@ -24,6 +24,8 @@ import android.view.ViewRootImpl;
 import android.graphics.drawable.LayerDrawable;
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable;
 import android.annotation.TargetApi
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 
 class NewOptionsPopupWindow(contentView: View, width: Int, height: Int,val launcher : Launcher) : PopupWindow(contentView, width, height,true) {
     var popupChildWindow: OptionsChildPopupWindow? = null
@@ -175,8 +177,22 @@ class NewOptionsPopupWindow(contentView: View, width: Int, height: Int,val launc
             }
         }
 
+        // 粘贴：剪贴板中有文件时按钮可用(正常颜色)，否则置灰
+        val pasteView = contentView.findViewById<TextView>(R.id.text_paste)
+        updatePasteButton(pasteView)
+        pasteView?.setOnClickListener({
+            if (hasClipboardFiles()) {
+                launcher.gotoDocApp(FileUtils.PASTE_FILE, "")
+                dismiss()
+            }
+        })
+        pasteView?.setOnHoverListener { _, _ ->
+            hidePopupWindow()
+            false
+        }
 
-       
+
+
         contentView.findViewById<TextView>(R.id.text_open_the_terminal)?.setOnClickListener({
             launcher.openLinuxApp(""+"###"+"open_terminal"+"###open###"+"");     
             dismiss()
@@ -216,7 +232,51 @@ class NewOptionsPopupWindow(contentView: View, width: Int, height: Int,val launc
         }
     }
 
+    /**
+     * 判断系统剪贴板中是否包含文件(URI)，用于决定粘贴按钮是否可用。
+     */
+    private fun hasClipboardFiles(): Boolean {
+        return try {
+            val clipboardManager = launcher.getSystemService(ClipboardManager::class.java)
+                ?: return false
+            if (!clipboardManager.hasPrimaryClip()) return false
+            val clip = clipboardManager.primaryClip ?: return false
+            val description = clipboardManager.primaryClipDescription
+            if (description != null &&
+                description.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)
+            ) {
+                return true
+            }
+            for (i in 0 until clip.itemCount) {
+                if (clip.getItemAt(i).uri != null) {
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 更新粘贴按钮状态：剪贴板有文件时正常颜色，否则置灰。
+     */
+    fun updatePasteButton(pasteView: TextView?) {
+        val view = pasteView
+            ?: contentView.findViewById<TextView>(R.id.text_paste)
+            ?: return
+        val enabled = hasClipboardFiles()
+        view.setTextColor(
+            launcher.getColor(
+                if (enabled) R.color.desktop_menu_text_enabled
+                else R.color.desktop_menu_text_disabled
+            )
+        )
+    }
+
     override fun showAtLocation(parent: View?, gravity: Int, x: Int, y: Int) {
+        // 每次显示时都重新判断剪贴板，刷新粘贴按钮颜色
+        updatePasteButton(null)
         super.showAtLocation(parent, gravity, x, y)
     
     }

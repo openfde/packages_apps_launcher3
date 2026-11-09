@@ -23,7 +23,7 @@ import android.view.ViewConfiguration;
 
 import com.android.launcher3.util.TouchUtil;
 import com.android.window.flags.Flags;
-
+import android.util.Log;
 /**
  * Utility class to handle tripper long press or right click on a view with custom timeout and
  * stylus event
@@ -59,6 +59,7 @@ public class CheckLongPressHelper {
      * @see View#onTouchEvent(MotionEvent)
      */
     public void onTouchEvent(MotionEvent ev) {
+        Log.d("CheckLongPressHelper","onTouchEvent getAction: "+ev.getAction() + " ,getButtonState: "+ev.getButtonState());
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN: {
                 // Just in case the previous long press hasn't been cleared, we make sure to
@@ -68,7 +69,11 @@ public class CheckLongPressHelper {
                 // Mouse right click should immediately trigger a long press
                 if (TouchUtil.isMouseRightClickDownOrMove(ev)) {
                     mIsInMouseRightClick = true;
-                    triggerLongPress();
+                    // isMouseRightClick=true bypasses both the pressed-state guard (the same
+                    // ACTION_DOWN may already have pressed the view via super.onTouchEvent) and
+                    // the window-focus guard (right click on a launcher shown behind other
+                    // freeform windows does not grant window focus).
+                    triggerLongPress(true);
                     final Handler handler = mView.getHandler();
                     if (handler != null) {
                         // Send an ACTION_UP to end this click gesture to avoid user dragging with
@@ -141,9 +146,28 @@ public class CheckLongPressHelper {
     }
 
     private void triggerLongPress() {
+        triggerLongPress(/* isMouseRightClick= */ false);
+    }
+
+    /**
+     * Triggers the long press action on the view.
+     *
+     * @param isMouseRightClick when true this call originates from an explicit mouse right click,
+     *     in which case the usual guards for the pressed state and for window focus are skipped:
+     *     <ul>
+     *       <li>the same ACTION_DOWN may already have pressed the view via
+     *           {@code super.onTouchEvent()} (workspace icons are not in a scrolling container, so
+     *           they are pressed immediately on ACTION_DOWN);</li>
+     *       <li>right clicking a launcher window that is shown behind other (freeform) windows
+     *           does not grant it window focus.</li>
+     *     </ul>
+     *     Whether the event is meant for this window is left to the touch dispatcher, matching the
+     *     desktop empty-space right-click menu behavior (no window-focus check).
+     */
+    private void triggerLongPress(boolean isMouseRightClick) {
         if ((mView.getParent() != null)
-                && (Flags.showHomeBehindDesktop() || mView.hasWindowFocus())
-                && (!mView.isPressed() || mListener != null)
+                && (isMouseRightClick || Flags.showHomeBehindDesktop() || mView.hasWindowFocus())
+                && (isMouseRightClick || !mView.isPressed() || mListener != null)
                 && !mHasPerformedLongPress) {
             boolean handled;
             if (mListener != null) {

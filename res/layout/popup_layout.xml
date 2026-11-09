@@ -63,6 +63,13 @@
 
         <View style="@style/popWindowLineStyle" />
 
+        <TextView
+            android:id="@+id/text_paste"
+            style="@style/popWindowTextStyle"
+            android:text="@string/desktop_new_paste" />
+
+        <View style="@style/popWindowLineStyle" />
+
         <RelativeLayout
             android:id="@+id/layout_system_theme"
             android:layout_width="160dp"

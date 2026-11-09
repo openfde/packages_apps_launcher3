@@ -67,6 +67,13 @@ open class PopupContainer<T : ActivityContext>(
     val itemInfo: ItemInfo,
     val updateIconUi: Boolean,
 ) : ArrowPopup<T>(context), DragSource, DragController.DragListener, Popup {
+    /**
+     * Show the popup in an overlay (TYPE_APPLICATION_OVERLAY) window when it comes from the home
+     * screen launcher, so that it is displayed above all apps — in particular above freeform
+     * windows covering the desktop, which would otherwise hide the menu.
+     */
+    override fun shouldUseOverlayWindow(): Boolean = mActivityContext is Launcher
+
     var deepShortcutDragHandler: DeepShortcutDragHandler? = null
     /** Here we hold the system shortcuts that we show for the Popup. */
     // TODO b/441320297
@@ -163,7 +170,9 @@ open class PopupContainer<T : ActivityContext>(
     open fun showComposePopup(systemShortcuts: List<PopupItem>, deepShortcutCount: Int = 0) {
         mElevation = 0f
         mIsOpen = true
-        popupContainer.addView(this)
+        // The popup is hosted either in the drag layer or in the overlay window (see
+        // getPopupParent()), so that it is rendered above other applications when needed.
+        popupParent.addView(this)
         visibility = GONE
         val lp = layoutParams
         lp.width = LayoutParams.WRAP_CONTENT

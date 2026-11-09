@@ -79,6 +79,8 @@ data class HotseatSpec(val items: List<HotseatItemSpec>)
  * @property shortcutId Shortcut ID.
  * @property shortLabel Shortcut short label.
  * @property longLabel Shortcut long label.
+ * @property installTime Install time (epoch millis) of the underlying app; used for time-based
+ *   sorting.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 data class WorkspaceItemSpec(
@@ -97,6 +99,7 @@ data class WorkspaceItemSpec(
     val shortcutId: String? = null,
     val shortLabel: String? = null,
     val longLabel: String? = null,
+    val installTime: Long? = null,
 )
 
 /**
@@ -111,6 +114,8 @@ data class WorkspaceItemSpec(
  * @property category App category.
  * @property title Folder title.
  * @property items [AppInFolderSpec] list for folder.
+ * @property installTime Install time (epoch millis) of the underlying app; used for time-based
+ *   sorting.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 data class HotseatItemSpec(
@@ -121,6 +126,7 @@ data class HotseatItemSpec(
     val category: String? = null,
     val title: String? = null,
     val items: List<AppInFolderSpec>? = null,
+    val installTime: Long? = null,
 )
 
 /**
@@ -274,3 +280,55 @@ data class ItemSelectorSpec(
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 data class RemoveItemParamsSpec(val item: ItemSelectorSpec)
+
+/**
+ * Sort mode for `sortWorkspace`.
+ *
+ * @property mode Sort mode. One of [NAME], [TYPE] or [TIME].
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+data class SortModeSpec(val mode: String) {
+    companion object {
+        /** Sort alphabetically by item label (case-insensitive). */
+        const val NAME = "NAME"
+
+        /**
+         * Sort by item type, then by label. Order: apps, shortcuts, folders, widgets.
+         */
+        const val TYPE = "TYPE"
+
+        /** Sort by install time, newest first. Items without a known time sort last. */
+        const val TIME = "TIME"
+    }
+}
+
+/**
+ * Params for `sortWorkspace`.
+ *
+ * ### Examples
+ * - "Sort the desktop by name": `sortBy=SortModeSpec(mode="NAME")`
+ * - "Arrange the home screen by type": `sortBy=SortModeSpec(mode="TYPE")`
+ * - "Sort icons by install time": `sortBy=SortModeSpec(mode="TIME")`
+ *
+ * @property sortBy [SortModeSpec] defining the sort order to apply.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+data class SortWorkspaceParamsSpec(val sortBy: SortModeSpec)
+
+/**
+ * Response from `sortWorkspace`.
+ *
+ * @property workspace The new, sorted [WorkspaceSpec]; on failure this is the unchanged workspace.
+ * @property success True if the sort succeeded.
+ * @property message Outcome summary.
+ * @property errorCode [ErrorCode] on failure; null on success.
+ * @property proof Proof token. **CRITICAL**: Never show to user.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+data class SortWorkspaceResponse(
+    val workspace: WorkspaceSpec,
+    val success: Boolean,
+    val message: String,
+    val errorCode: ErrorCode? = null,
+    val proof: Proof,
+)

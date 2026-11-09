@@ -28,6 +28,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -41,6 +42,7 @@ import android.view.MotionEvent;
 import android.view.PointerIcon;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.Interpolator;
 import android.view.animation.PathInterpolator;
 import android.widget.FrameLayout;
@@ -131,6 +133,18 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
     private final String mIterateChildrenTag;
 
     protected final int[] mColors;
+
+    // Overlay window hosting, used to render the popup above other applications' windows
+    // (e.g. freeform windows covering the launcher). The popup and its arrow are added to
+    // {@link #mOverlayHost}, a host frame positioned exactly over the drag layer so that all the
+    // drag-layer-relative positioning logic applies unchanged.
+    private WindowManager mOverlayWindowManager;
+    private FrameLayout mOverlayRoot;
+    private View mOverlayScrim;
+    private FrameLayout mOverlayHost;
+    private boolean mOverlayWindowFailed;
+
+    private static final String OVERLAY_WINDOW_TITLE = "Launcher SystemShortcut Overlay";
 
     public ArrowPopup(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
@@ -331,7 +345,7 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
     protected void setupForDisplay() {
         setVisibility(View.INVISIBLE);
         mIsOpen = true;
-        getPopupContainer().addView(this);
+        getPopupParent().addView(this);
         orientAboutObject();
     }
 
@@ -350,7 +364,7 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
     }
 
     protected void addArrow() {
-        getPopupContainer().addView(mArrow);
+        getPopupParent().addView(mArrow);
         mArrow.setX(getX() + getArrowLeft());
 
         if (Gravity.isVertical(mGravity)) {
@@ -740,8 +754,10 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
         }
         mIsOpen = false;
         mDeferContainerRemoval = false;
-        getPopupContainer().removeView(this);
-        getPopupContainer().removeView(mArrow);
+        ViewGroup popupParent = getPopupParent();
+        popupParent.removeView(this);
+        popupParent.removeView(mArrow);
+        destroyOverlayWindow();
         mOnCloseCallbacks.executeAllAndClear();
     }
 
@@ -754,5 +770,131 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
 
     protected BaseDragLayer getPopupContainer() {
         return mActivityContext.getDragLayer();
+    }
+
+    /**
+     * Returns true when this popup should be shown in a {@code TYPE_APPLICATION_OVERLAY} window,
+     * rendering it above all applications (e.g. above freeform windows covering the launcher).
+     * Subclasses can override (e.g. {@code PopupContainer} enables this for the home screen
+     * launcher) to opt into the overlay behavior.
+     */
+    protected boolean shouldUseOverlayWindow() {
+        return false;
+    }
+
+    /**
+     * The {@link ViewGroup} that the popup and its arrow are added to. By default it is the drag
+     * layer; when {@link #shouldUseOverlayWindow()} returns true it is a host frame placed
+     * exactly over the drag layer, so that all the drag-layer-relative positioning logic keeps
+     * working unchanged while the popup itself is rendered in the layered overlay window.
+     */
+    protected ViewGroup getPopupParent() {
+        if (shouldUseOverlayWindow()) {
+            if (mOverlayHost == null) {
+                createOverlayWindow();
+            }
+            if (mOverlayHost != null) {
+                return mOverlayHost;
+            }
+            // Failed to create the overlay window, fall back to the drag layer.
+        }
+        return getPopupContainer();
+    }
+
+    /**
+     * Creates the overlay window that hosts the popup above all applications. The overlay is a
+     * full-screen window whose frame is placed exactly over the drag layer; a transparent full
+     * screen layer closes the popup whenever the user taps outside of it.
+     */
+    private void createOverlayWindow() {
+        if (mOverlayRoot != null || mOverlayWindowFailed) {
+            return;
+        }
+        try {
+            BaseDragLayer dragLayer = getPopupContainer();
+            mOverlayWindowManager =
+                    (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+
+            mOverlayRoot = new FrameLayout(getContext());
+
+            // Transparent full-screen scrim: tapping anywhere not handled by the popup closes it.
+            mOverlayScrim = new View(getContext());
+            mOverlayScrim.setOnClickListener(v -> close(true));
+            mOverlayRoot.addView(mOverlayScrim, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            // Host frame positioned exactly over the drag layer (same on-screen rect), so that all
+            // popup positioning computed in drag-layer coordinates applies unchanged.
+            mOverlayHost = new FrameLayout(getContext());
+            // Closing the menu when the user taps the (empty part of the) host, i.e. outside the
+            // popup itself.
+            mOverlayHost.setOnTouchListener((v, ev) -> {
+                close(true);
+                return true;
+            });
+            mOverlayRoot.addView(mOverlayHost, getOverlayHostLayoutParams(dragLayer));
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                            | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    PixelFormat.TRANSLUCENT);
+            params.gravity = Gravity.TOP | Gravity.LEFT;
+            params.setTitle(OVERLAY_WINDOW_TITLE);
+
+            mOverlayWindowManager.addView(mOverlayRoot, params);
+            AbstractFloatingView.registerOverlayView(this);
+        } catch (RuntimeException e) {
+            // The overlay window could not be created (e.g. missing overlay permission); fall
+            // back to showing the popup inside the launcher's drag layer.
+            mOverlayWindowFailed = true;
+            mOverlayHost = null;
+            if (mOverlayRoot != null) {
+                try {
+                    mOverlayWindowManager.removeView(mOverlayRoot);
+                } catch (RuntimeException ignored) {
+                }
+                mOverlayRoot = null;
+            }
+            mOverlayScrim = null;
+            mOverlayWindowManager = null;
+        }
+    }
+
+    /**
+     * Returns layout params that place the overlay host frame exactly over the drag layer's
+     * on-screen bounds.
+     */
+    private FrameLayout.LayoutParams getOverlayHostLayoutParams(BaseDragLayer dragLayer) {
+        int[] location = new int[2];
+        dragLayer.getLocationOnScreen(location);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                Math.max(dragLayer.getWidth(), 1), Math.max(dragLayer.getHeight(), 1));
+        lp.gravity = Gravity.TOP | Gravity.LEFT;
+        lp.leftMargin = location[0];
+        lp.topMargin = location[1];
+        return lp;
+    }
+
+    /**
+     * Removes the overlay window created by {@link #createOverlayWindow()}, if any.
+     */
+    private void destroyOverlayWindow() {
+        if (mOverlayRoot == null) {
+            return;
+        }
+        AbstractFloatingView.unregisterOverlayView(this);
+        try {
+            mOverlayWindowManager.removeView(mOverlayRoot);
+        } catch (RuntimeException e) {
+            // Already removed.
+        }
+        mOverlayRoot = null;
+        mOverlayScrim = null;
+        mOverlayHost = null;
+        mOverlayWindowManager = null;
     }
 }
