@@ -16,7 +16,6 @@
 package com.android.launcher3.model.tasks;
 
 import static com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPLICATION;
-import static com.android.launcher3.WorkspaceLayoutManager.FIRST_SCREEN_ID;
 import static com.android.launcher3.WorkspaceLayoutManager.TAG;
 
 import android.content.Context;
@@ -78,7 +77,10 @@ public class AddWorkspaceItemsTask implements ModelUpdateTask {
         }
 
         final ArrayList<ItemInfo> addedItemsFinal = new ArrayList<>();
-        final IntSet excludedScreens = IntSet.wrap(FIRST_SCREEN_ID);
+        // FDE 使用单屏桌面（WorkspaceLayoutManager.addInScreen 强制 screenId = 0）。
+        // 这里不能再排除 FIRST_SCREEN_ID，否则找空位时会忽略真实屏幕上的所有图标，
+        // 把新图标放到并不存在的“第二屏”，最终叠在真实桌面的第一个格子上。
+        final IntSet excludedScreens = new IntSet();
         final Context context = taskController.getContext();
 
         synchronized (dataModel) {
