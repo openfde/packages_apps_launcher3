@@ -35,6 +35,15 @@ object AbstractFloatingViewHelper {
                 child.close(animate)
             }
         }
+        // Also close floating views hosted in overlay windows (not drag layer children), so that
+        // they do not linger when the launcher goes away.
+        for (view in AbstractFloatingView.getOverlayViews()) {
+            if (view.isOfType(type) &&
+                (view.context as? ActivityContext) == activity
+            ) {
+                view.close(animate)
+            }
+        }
     }
 
     fun getTopOpenViewWithType(

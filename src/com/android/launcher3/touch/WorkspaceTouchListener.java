@@ -50,7 +50,7 @@ import com.android.launcher3.logger.LauncherAtom;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.TouchUtil;
-
+import android.util.Log;
 /**
  * Helper class to handle touch on empty space in workspace and show options popup on long press
  */
@@ -122,6 +122,7 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
                 mLongPressState = STATE_REQUESTED;
                 mTouchDownPoint.set(ev.getX(), ev.getY());
                 // Mouse right button's ACTION_DOWN should immediately show menu
+                  Log.d("CheckLongPressHelper","WorkspaceTouchListener onTouch "+ev.getAction());
                 if (TouchUtil.isMouseRightClickDownOrMove(ev)) {
                     maybeShowMenu();
                     return true;
