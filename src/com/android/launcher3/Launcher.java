@@ -3280,10 +3280,11 @@ public class Launcher extends StatefulActivity<LauncherState>
 
             final int pasteOpType = opType;
             final List<File> pasteSrcs = srcs;
-            // 复制/移动可能耗时，放到后台线程执行，完成后在 UI 线程刷新桌面
+            // 复制/移动可能耗时，放到后台线程执行，完成后只增量刷新粘贴到桌面的项，避免整屏重载
             new Thread(() -> {
+                List<File> pasted = null;
                 try {
-                    pasteFilesToDesktop(pasteSrcs, pasteOpType);
+                    pasted = pasteFilesToDesktop(pasteSrcs, pasteOpType);
                     if (pasteOpType == PASTE_OP_MOVE) {
                         // 剪切粘贴完成后清空剪贴板，避免重复粘贴已移动的文件
                         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -3294,8 +3295,14 @@ public class Launcher extends StatefulActivity<LauncherState>
                 } catch (Exception e) {
                     Log.e(TAG,"pasteFromClipboard: local copy/move failed.", e);
                 } finally {
-                    Log.d(TAG,"pasteFromClipboard: done, refresh desktop.");
-                    runOnUiThread(() -> refreshDesktopFiles(Launcher.this));
+                    Log.d(TAG,"pasteFromClipboard: done, refresh desktop items.");
+                    if (pasted == null || pasted.isEmpty()) {
+                        // 没有实际写入文件（全部被跳过或桌面目录创建失败），无需刷新
+                        Log.d(TAG,"pasteFromClipboard: nothing pasted, skip refresh.");
+                    } else {
+                        // 只逐个添加本次粘贴产生的文件，不整屏重载
+                        refreshDesktopFileItems(pasted);
+                    }
                 }
             }, "desktop-paste").start();
         } catch (Exception e) {
@@ -3341,12 +3348,16 @@ public class Launcher extends StatefulActivity<LauncherState>
     /**
      * 同步对一组本地文件执行复制/移动：源来自剪贴板，目标统一为当前桌面目录。
      * 目录递归复制；同名冲突自动追加 _1/_2… 后缀。
+     *
+     * @return 本次真正写入桌面的目标文件列表（跳过项/同目录移动无操作项不包含在内），
+     *         调用方据此只增量刷新这些项，避免整屏重载。
      */
-    private void pasteFilesToDesktop(List<File> srcs, int opType) throws IOException {
+    private List<File> pasteFilesToDesktop(List<File> srcs, int opType) throws IOException {
+        List<File> pasted = new ArrayList<>();
         File desktopDir = new File(FileUtils.getAllDesktopPath());
         if (!desktopDir.exists() && !desktopDir.mkdirs()) {
             Log.e(TAG,"pasteFilesToDesktop: cannot create desktop dir " + desktopDir);
-            return;
+            return pasted;
         }
 
         File desktopCanonical = desktopDir.getCanonicalFile();
@@ -3374,6 +3385,82 @@ public class Launcher extends StatefulActivity<LauncherState>
                 copyFileOrDir(src, dst);
             }
             Log.d(TAG,"pasteFilesToDesktop " + src + " -> " + dst);
+            if (dst.exists()) {
+                pasted.add(dst);
+            }
+        }
+        return pasted;
+    }
+
+    /**
+     * 桌面文件发生变化后，只把本次新增的文件逐个写入数据库并绑定到界面，
+     * 避免像 addDesktopFiles/showDesktop 那样全量重扫并在最后调用 bindForceWorkspace() 整屏重载。
+     *
+     * item 的字段构造与 addDesktopFiles 保持一致：
+     *   - 以 com.android.documentsui.LauncherActivity 作为打开入口
+     *   - title 为文件名，itemType 按目录/文档区分
+     *   - cellX/cellY 取剩余空闲点
+     * 同时做与 addDesktopFiles 一致的过滤：.desktop 文件（linux 应用快捷方式）不展示；
+     * 已存在于数据库中的同名项不再重复插入。
+     */
+    private void refreshDesktopFileItems(List<File> files){
+        try{
+            if(files == null || files.isEmpty()){
+                return;
+            }
+            List<Point> listIdle = FileUtils.getAllIdlePoints(Launcher.this,getModel().getModelDbController());
+            if(listIdle == null || listIdle.isEmpty()){
+                Log.w(TAG,"refreshDesktopFileItems: no idle point available, skip add.");
+                return;
+            }
+            List<Map<String,Object>> listTexts = DbUtils.queryDesktopTextFilesFromDatabase(getModel().getModelDbController());
+            int index = 0;
+            for(File f : files){
+                String fTitle = f.getName().toLowerCase();
+                // 与 addDesktopFiles 一致：.desktop 文件不展示在桌面上
+                if(fTitle.contains(".desktop")){
+                    Log.d(TAG,"refreshDesktopFileItems: skip desktop file " + f.getName());
+                    continue;
+                }
+                if(!f.exists()){
+                    Log.w(TAG,"refreshDesktopFileItems: file not exists, skip " + f);
+                    continue;
+                }
+                // 默认未添加该文件到DB，如果查询到则不执行插入操作
+                boolean found = false;
+                if(listTexts != null){
+                    found = listTexts.stream().anyMatch(item -> f.getName().equals(item.get("title").toString()));
+                }
+                if(found){
+                    Log.d(TAG,"refreshDesktopFileItems: already in database, skip " + f.getName());
+                    continue;
+                }
+                if(index >= listIdle.size()){
+                    Log.w(TAG,"refreshDesktopFileItems: no idle point left, stop adding.");
+                    break;
+                }
+                Point point = listIdle.get(index++);
+                WorkspaceItemInfo info = new WorkspaceItemInfo();
+                info.mComponentName = new ComponentName("com.android.documentsui","com.android.documentsui.LauncherActivity");
+                info.title = f.getName();
+                info.container = -100;
+                info.screenId = 0;
+                Intent intent = new Intent();
+                intent.setPackage("com.android.launcher3");
+                info.intent = intent;
+                info.cellX = point.x;
+                info.cellY = point.y;
+                if(f.isDirectory()){
+                    info.itemType = LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY;
+                }else{
+                    info.itemType = LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT;
+                }
+                // 只新增该项（内部走 modelExecutor -> bindItemsAdded 动态绑定，不做 full reload）
+                insertOrUpdateFavorites(info);
+                Log.d(TAG,"refreshDesktopFileItems: added " + info.title + " at (" + info.cellX + "," + info.cellY + ")");
+            }
+        }catch(Exception e){
+            Log.e(TAG,"refreshDesktopFileItems failed", e);
         }
     }
 
