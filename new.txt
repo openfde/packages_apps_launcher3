@@ -1,0 +1,21 @@
+    private void batchInsert(){
+        synchronized (mFdeInitLock) {
+            int size = mNewShortcutItems.size();
+            if(size == 0){
+                // 没有新增文件时不需要刷新桌面，避免整屏图标重新绑定引起抖动
+                return;
+            }
+
+            List<WorkspaceItemInfo> uniqueList = mNewShortcutItems.stream()
+                .collect(Collectors.toMap(WorkspaceItemInfo::getTitle, p -> p, (p1, p2) -> p1))
+                .values().stream().collect(Collectors.toList());
+
+            for(WorkspaceItemInfo shortcut : uniqueList){
+                insertOrUpdateFavorites(shortcut);
+            }
+
+            // 只绑定新增的这几个图标，不再整体重载 Workspace，
+            // 这样桌面上其它已经存在的图标不会被销毁重建，也就不会抖动
+            bindDesktopItemsAdded(uniqueList);
+        }
+    }

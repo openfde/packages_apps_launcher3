@@ -3048,6 +3048,74 @@ public class Launcher extends StatefulActivity<LauncherState>
          getModel().forceReload("REQUEST_CLEAR_DATA");
     }
 
+    /**
+     * 只把新增的桌面图标绑定到 Workspace 上，不重新加载整个桌面。
+     * <p>桌面文件新增/删除时如果调用 {@link #bindForceWorkspace()} 会清空并重建所有图标，
+     * 其它图标会跟着闪动；这里改为只 inflate 并挂载新增的那几个图标。</p>
+     */
+    public void bindDesktopItemsAdded(List<? extends ItemInfo> addedItems){
+        if(addedItems == null || addedItems.isEmpty() || isDestroyed()){
+            return;
+        }
+        runOnUiThread(() -> {
+            if(isDestroyed() || mWorkspace == null){
+                return;
+            }
+            // 桌面上已经存在的文件/应用图标，用于避免并发刷新时同一个文件被重复绑定成两个图标
+            Set<String> existingKeys = new HashSet<>();
+            mWorkspace.mapOverItems((info, view) -> {
+                if(info != null && isDesktopFileItemType(info.itemType) && info.title != null){
+                    existingKeys.add(info.itemType + "#" + info.title);
+                }
+                return false;
+            });
+
+            List<Pair<ItemInfo, View>> pairs = new ArrayList<>();
+            for(ItemInfo info : addedItems){
+                if(isDesktopFileItemType(info.itemType) && info.title != null
+                        && !existingKeys.add(info.itemType + "#" + info.title)){
+                    Log.d(TAG, "bindDesktopItemsAdded: skip duplicated item " + info.title);
+                    continue;
+                }
+                // 这些节点是内存里直接构造的，DB 加载路径会补上 user，这里保持一致
+                if(info.user == null){
+                    info.user = android.os.Process.myUserHandle();
+                }
+                View view = getItemInflater().inflateItem(info);
+                if(view != null){
+                    pairs.add(Pair.create(info, view));
+                }
+            }
+            if(!pairs.isEmpty()){
+                // boundAnim 传 null：不播放新增/翻页动画，桌面上已有的图标保持静止
+                bindInflatedItems(pairs, null);
+            }
+        });
+    }
+
+    /** 是否为桌面文件/桌面应用这类由文件系统同步出来的图标 */
+    private static boolean isDesktopFileItemType(int itemType){
+        return itemType == LauncherSettings.Favorites.ITEM_TYPE_DOCUMENT
+                || itemType == LauncherSettings.Favorites.ITEM_TYPE_DIRECTORY
+                || itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP
+                || itemType == LauncherSettings.Favorites.ITEM_TYPE_ANDROID_APP;
+    }
+
+    /**
+     * 只删除匹配到的桌面图标（同时删除数据库记录），不重新加载整个桌面。
+     */
+    public void removeDesktopItems(Predicate<ItemInfo> matcher, String reason){
+        if(matcher == null){
+            return;
+        }
+        runOnUiThread(() -> {
+            if(isDestroyed() || mWorkspace == null){
+                return;
+            }
+            mWorkspace.persistRemoveItemsByMatcher(matcher, reason);
+        });
+    }
+
     public void removeView(int x, int y){
         try{
             mWorkspace.removeWorkspaceItem(mWorkspace.getScreenWithId(0).getChildAt(x, y));
@@ -3146,7 +3214,8 @@ public class Launcher extends StatefulActivity<LauncherState>
                             @Override
                             public void run() {
                                 if("NEW_FILE".equals(method) || "NEW_DIR".equals(method) ){
-
+                                    // 新增文件：只把新文件对应的图标增量加进来，其它图标不动
+                                    refreshDesktopFiles(Launcher.this);
                                 }else if("RENAME".equals(method)){
 
                                 }else if("UPDATE_DESKTOP".equals(method) || "DELETE_FILE".equals(method)){
@@ -3159,15 +3228,22 @@ public class Launcher extends StatefulActivity<LauncherState>
                                                 String fileName = Paths.get(arrFileName[1]).getFileName().toString();
                                                 Log.d(TAG, "delete c: arrFileName[1]: "+arrFileName[1] + ",fileName "+fileName);
                                                 if(fileName.endsWith("_fde.desktop")){
-                                                    // delete by fileName
+                                                    // 只增量删除这个应用图标
                                                     if(FileUtils.isOpenAppFusion()){
-                                                        DbUtils.deleteByFileNameFromDatabase(getModel().getModelDbController(),fileName);
+                                                        removeDesktopItems(item -> item != null
+                                                                && (fileName.contentEquals(item.title)
+                                                                    || fileName.contentEquals(item.appWidgetProvider)),
+                                                                "desktop-app-file-deleted");
                                                     }else{
                                                         try{
                                                             String packageName = fileName.replaceAll("_fde.desktop", "");
                                                             boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
                                                             if(!isAppInstalled){
-                                                                DbUtils.deleteByFileNameFromDatabase(getModel().getModelDbController(),fileName);
+                                                                removeDesktopItems(item -> item != null
+                                                                        && (fileName.contentEquals(item.title)
+                                                                            || fileName.contentEquals(item.appWidgetProvider)
+                                                                            || packageName.contentEquals(item.appWidgetProvider)),
+                                                                        "desktop-app-file-deleted");
                                                             }
                                                         }catch(Exception e){
                                                             e.printStackTrace();
@@ -3175,8 +3251,10 @@ public class Launcher extends StatefulActivity<LauncherState>
                                                     }
 
                                                 }else{
-                                                    //delete by title
-                                                    DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fileName); 
+                                                    // 只增量删除标题对应的那个图标
+                                                    removeDesktopItems(item -> item != null
+                                                            && fileName.contentEquals(item.title),
+                                                            "desktop-file-deleted");
                                                 }
                                             }
                                         }catch(Exception e){
@@ -3609,8 +3687,9 @@ public class Launcher extends StatefulActivity<LauncherState>
                     File f = new File(documentId + fName);
                     if(!f.exists()){
                         // Log.d(TAG, "refreshDesktopFiles file not exists fName  "+fName );
-                        // mBgDataModel.removeItem(mContext, item);
-                         DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fName);   
+                        // 只增量删除这一个图标（View + 数据库记录），不整屏刷新
+                        removeDesktopItems(item -> item != null && fName.contentEquals(item.title),
+                                "desktop-file-deleted");
                     }
                 }
             }
@@ -3652,7 +3731,9 @@ public class Launcher extends StatefulActivity<LauncherState>
                                 boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
                                 if(!FileUtils.isOpenAppFusion()){
                                     if(!isAppInstalled){
-                                        DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),f.getName());
+                                        removeDesktopItems(item -> item != null
+                                                && f.getName().contentEquals(item.title),
+                                                "desktop-app-file-deleted");
                                     }
                                     //if close app_fusion move android desktop to hide dir
                                     if(f.exists()){
@@ -3721,28 +3802,21 @@ public class Launcher extends StatefulActivity<LauncherState>
         synchronized (mFdeInitLock) {
             int size = mNewShortcutItems.size();
             if(size == 0){
-                bindForceWorkspace();
-            }else{
-                List<WorkspaceItemInfo> uniqueList = mNewShortcutItems.stream()
-                    .collect(Collectors.toMap(WorkspaceItemInfo::getTitle, p -> p, (p1, p2) -> p1))
-                    .values().stream().collect(Collectors.toList());
-
-                for(WorkspaceItemInfo shortcut : uniqueList){
-                    insertOrUpdateFavorites(shortcut);
-                }
-
-                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                bindForceWorkspace();
-                            }
-                        });
-                    }
-                }, ON_ACTIVITY_RESULT_ANIMATION_DELAY);
+                // 没有新增文件时不需要刷新桌面，避免整屏图标重新绑定引起抖动
+                return;
             }
+
+            List<WorkspaceItemInfo> uniqueList = mNewShortcutItems.stream()
+                .collect(Collectors.toMap(WorkspaceItemInfo::getTitle, p -> p, (p1, p2) -> p1))
+                .values().stream().collect(Collectors.toList());
+
+            for(WorkspaceItemInfo shortcut : uniqueList){
+                insertOrUpdateFavorites(shortcut);
+            }
+
+            // 只绑定新增的这几个图标，不再整体重载 Workspace，
+            // 这样桌面上其它已经存在的图标不会被销毁重建，也就不会抖动
+            bindDesktopItemsAdded(uniqueList);
         }
     }
 
@@ -3769,7 +3843,10 @@ public class Launcher extends StatefulActivity<LauncherState>
                 }
                 return addLinuxApps();
             }else{
-                 DbUtils.deleteAllLinuxAppFromDatabase(getModel().getModelDbController());
+                 // 只增量移除 Linux 应用图标，不整屏刷新
+                 removeDesktopItems(item -> item != null
+                         && item.itemType == LauncherSettings.Favorites.ITEM_TYPE_LINUX_APP,
+                         "linux-app-cleared");
                  listDeskTopAndroid  = FileUtils.getInstalledAppsList(Launcher.this);
                  addDesktopFiles(0,null);
             }
@@ -3801,7 +3878,8 @@ public class Launcher extends StatefulActivity<LauncherState>
                     boolean isExists = false;
                     isExists = listDeskTopLinux.stream().anyMatch(item -> fName.equals(item.get("FileName").toString()));
                     if(!isExists){
-                        DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fName); 
+                        removeDesktopItems(item -> item != null && fName.contentEquals(item.title),
+                                "linux-app-deleted");
                     }
                 }
             }
@@ -3982,6 +4060,9 @@ public class Launcher extends StatefulActivity<LauncherState>
                 }catch(Exception e){
                     e.printStackTrace();
                 }
+            }else{
+                // 没有检测到新增文件时仍然执行一次整体刷新（手动刷新 / dock 缩放等场景）
+                bindForceWorkspace();
             }
         });
     }
@@ -4048,9 +4129,12 @@ public class Launcher extends StatefulActivity<LauncherState>
                 SPUtils.putUserInfo(Launcher.this,message, "");
             }else{
                 String fileName = message + "_fde.desktop";
-                DbUtils.deleteTitleFromDatabase(getModel().getModelDbController(),fileName);
+                // 只删除被卸载应用的图标，不整屏刷新
+                removeDesktopItems(item -> item != null
+                        && (fileName.contentEquals(item.title)
+                            || message.contentEquals(item.appWidgetProvider)),
+                        "app-removed");
                 gotoDocApp(FileUtils.DELETE_FILE,FileUtils.PATH_ID_TEMP+""+fileName);
-                bindForceWorkspace();
             }
 
             //

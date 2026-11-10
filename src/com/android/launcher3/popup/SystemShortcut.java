@@ -404,8 +404,9 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
                     }
                     
                     dismissTaskMenuView();
+                    // removeItem 内部已经删除数据库记录并移除该图标，
+                    // 这里不再整体重载 Workspace，避免其它图标一起刷新/抖动
                     launcher.removeItem(mOriginalView, mItemInfo,true);
-                    launcher.bindForceWorkspace();
                 }
             }).create();
             alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
