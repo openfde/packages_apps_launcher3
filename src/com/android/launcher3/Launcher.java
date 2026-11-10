@@ -106,6 +106,11 @@ import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.ItemInfoMatcher.forFolderMatch;
 import static com.android.launcher3.util.SettingsCache.TOUCHPAD_NATURAL_SCROLLING;
 
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
+import android.os.PersistableBundle;
+
 import android.os.Handler;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
@@ -290,6 +295,9 @@ import com.android.launcher3.util.SPUtils;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import android.graphics.Point;
 import android.app.Instrumentation;
@@ -307,6 +315,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.app.ActivityCompat;
 import android.content.pm.PackageManager;
 import android.provider.Settings;
+import android.provider.DocumentsContract;
 import android.os.Environment;
 import androidx.core.content.FileProvider;
 import com.android.quickstep.util.ImageActionUtils;
@@ -3196,11 +3205,259 @@ public class Launcher extends StatefulActivity<LauncherState>
         }
     };
 
+    /**
+     * 剪贴板中操作类型的 key，与 DocumentsUI(RuntimeDocumentClipper) 一致：
+     * clipper:opType  -> OPERATION_COPY=1 / OPERATION_MOVE=4
+     */
+    private static final String PASTE_OP_TYPE_KEY = "clipper:opType";
+    private static final String PASTE_SRC_PARENT_KEY = "clipper:srcParent";
+    /** 对应 FileOperationService.OPERATION_COPY / OPERATION_MOVE */
+    private static final int PASTE_OP_COPY = 1;
+    private static final int PASTE_OP_MOVE = 4;
+    /** ExternalStorageProvider 主卷(document id 前缀)及文档权限校验用的 provider */
+    private static final String EXTERNAL_DOC_ROOT_ID = "primary:";
+    private static final String EXTERNAL_DOC_AUTHORITY = "com.android.externalstorage.documents";
+
+    /**
+     * 实现桌面"粘贴"，逻辑参考 DocumentsUI IpcService#pasteFromClipboard()。
+     *
+     * DocumentsUI 在拷贝/剪切时会把文件列表以标准剪贴板形式写入系统剪贴板：
+     *   - 每条 ClipData.Item 的 uri 为 content://com.android.externalstorage.documents/document/primary:<相对路径>
+     *   - ClipDescription 的 extras 中记录了操作类型 clipper:opType（1=拷贝 / 4=剪切）
+     *    与剪切时的源父目录 clipper:srcParent。
+     * 本方法读取剪贴板后，把这些内容解析成真实本地文件，同步复制/移动到当前桌面目录：
+     *   - 拷贝(COPY)：复制到桌面，保留源文件；
+     *   - 剪切(MOVE) ：移动到桌面，源与目标在同一目录时视为无操作，移动成功并清空剪贴板；
+     *   - 重名时自动追加 _1/_2… 后缀，目录递归复制。
+     * 全部完成后通知桌面刷新，保证粘贴结果立即可见。
+     */
+    private void pasteFromClipboard(){
+        try {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = null;
+
+            if (clipboard == null){
+                Log.d(TAG,"pasteFromClipboard clipboard is null");
+                return;
+            }
+
+            if (clipboard.hasPrimaryClip()) {
+                clip = clipboard.getPrimaryClip();
+            }
+            if (clip == null){
+                Log.d(TAG,"pasteFromClipboard clip is null");
+                return;
+            }
+
+            ClipDescription description = clip.getDescription();
+            CharSequence label = description == null ? null : description.getLabel();
+            PersistableBundle extras = description == null ? null : description.getExtras();
+            // 操作类型默认拷贝（1），剪切为 4
+            int opType = PASTE_OP_COPY;
+            String srcParent = null;
+            if (extras != null) {
+                opType = extras.getInt(PASTE_OP_TYPE_KEY, PASTE_OP_COPY);
+                srcParent = extras.getString(PASTE_SRC_PARENT_KEY);
+            }
+            Log.d(TAG,"pasteFromClipboard clip is clip.getItemCount() "+clip.getItemCount()
+                    + ",label "+label + ",opType "+opType + ",srcParent "+srcParent);
+
+            // 解析剪贴板中所有条目为真实本地文件（支持多文件），任一解析失败则跳过该项
+            List<File> srcs = new ArrayList<>();
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                Uri uri = clip.getItemAt(i).getUri();
+                File src = resolveClipboardFile(uri);
+                if (src == null) {
+                    Log.w(TAG,"pasteFromClipboard: cannot resolve clipboard uri " + uri);
+                    continue;
+                }
+                srcs.add(src);
+            }
+            if (srcs.isEmpty()) {
+                Log.w(TAG,"pasteFromClipboard: no local file found in clipboard, ignore.");
+                return;
+            }
+
+            final int pasteOpType = opType;
+            final List<File> pasteSrcs = srcs;
+            // 复制/移动可能耗时，放到后台线程执行，完成后在 UI 线程刷新桌面
+            new Thread(() -> {
+                try {
+                    pasteFilesToDesktop(pasteSrcs, pasteOpType);
+                    if (pasteOpType == PASTE_OP_MOVE) {
+                        // 剪切粘贴完成后清空剪贴板，避免重复粘贴已移动的文件
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) {
+                            cm.clearPrimaryClip();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG,"pasteFromClipboard: local copy/move failed.", e);
+                } finally {
+                    Log.d(TAG,"pasteFromClipboard: done, refresh desktop.");
+                    runOnUiThread(() -> refreshDesktopFiles(Launcher.this));
+                }
+            }, "desktop-paste").start();
+        } catch (Exception e) {
+            Log.e(TAG,"pasteFromClipboard failed", e);
+        }
+    }
+
+    /**
+     * 把 external-storage 的 document Uri 解析为真实文件。
+     * 例如 content://com.android.externalstorage.documents/document/primary:Desktop/a.txt
+     *      -> &lt;external storage&gt;/Desktop/a.txt
+     *
+     * “primary:” 是 ExternalStorageProvider 主卷的 document id 前缀，可据此把 URI
+     * 映射为 Environment.getExternalStorageDirectory() 下的真实路径。
+     *
+     * @return 无法解析或文件不存在时返回 null。
+     */
+    private File resolveClipboardFile(Uri uri) {
+        if (uri == null || !EXTERNAL_DOC_AUTHORITY.equals(uri.getAuthority())) {
+            return null;
+        }
+        final String docId;
+        try {
+            docId = DocumentsContract.getDocumentId(uri);
+        } catch (Exception e) {
+            Log.w(TAG,"resolveClipboardFile: cannot parse document id " + uri, e);
+            return null;
+        }
+        if (docId == null || !docId.startsWith(EXTERNAL_DOC_ROOT_ID)) {
+            return null;
+        }
+        String rel = docId.substring(EXTERNAL_DOC_ROOT_ID.length());
+        while (rel.startsWith("/")) {
+            rel = rel.substring(1);
+        }
+        if (rel.isEmpty()) {
+            return null;
+        }
+        File src = new File(Environment.getExternalStorageDirectory(), rel);
+        return src.exists() ? src : null;
+    }
+
+    /**
+     * 同步对一组本地文件执行复制/移动：源来自剪贴板，目标统一为当前桌面目录。
+     * 目录递归复制；同名冲突自动追加 _1/_2… 后缀。
+     */
+    private void pasteFilesToDesktop(List<File> srcs, int opType) throws IOException {
+        File desktopDir = new File(FileUtils.getAllDesktopPath());
+        if (!desktopDir.exists() && !desktopDir.mkdirs()) {
+            Log.e(TAG,"pasteFilesToDesktop: cannot create desktop dir " + desktopDir);
+            return;
+        }
+
+        File desktopCanonical = desktopDir.getCanonicalFile();
+        for (File src : srcs) {
+            if (!src.exists()) {
+                Log.w(TAG,"pasteFilesToDesktop: source not exists, skip " + src);
+                continue;
+            }
+            if (opType == PASTE_OP_MOVE) {
+                File srcParentFile = src.getCanonicalFile().getParentFile();
+                if (srcParentFile != null && srcParentFile.equals(desktopCanonical)) {
+                    // 同一目录内剪切+粘贴：视为无操作
+                    Log.d(TAG,"pasteFilesToDesktop: cut & paste in same folder, ignore " + src);
+                    continue;
+                }
+            }
+            File dst = pasteDestinationFor(desktopDir, src);
+            if (opType == PASTE_OP_MOVE) {
+                if (!src.renameTo(dst)) {
+                    // 跨文件系统 rename 失败时回退为复制后删除
+                    copyFileOrDir(src, dst);
+                    deleteRecursively(src);
+                }
+            } else {
+                copyFileOrDir(src, dst);
+            }
+            Log.d(TAG,"pasteFilesToDesktop " + src + " -> " + dst);
+        }
+    }
+
+    /**
+     * 在桌面目录下为源文件生成不冲突的目标路径（重名追加 _1/_2… 后缀）。
+     */
+    private File pasteDestinationFor(File desktopDir, File src) {
+        File dst = new File(desktopDir, src.getName());
+        if (!dst.exists()) {
+            return dst;
+        }
+        int dot = src.isDirectory() ? -1 : src.getName().lastIndexOf('.');
+        String base = dot > 0 ? src.getName().substring(0, dot) : src.getName();
+        String ext = dot > 0 ? src.getName().substring(dot) : "";
+        int i = 1;
+        do {
+            dst = new File(desktopDir, base + "_" + (i++) + ext);
+        } while (dst.exists());
+        return dst;
+    }
+
+    /**
+     * 复制文件或递归复制目录到目标路径。
+     */
+    private void copyFileOrDir(File src, File dst) throws IOException {
+        if (src.isDirectory()) {
+            copyRecursive(src, dst);
+        } else {
+            File parent = dst.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                throw new IOException("Cannot create parent dir " + parent);
+            }
+            try (FileInputStream in = new FileInputStream(src);
+                 FileOutputStream out = new FileOutputStream(dst)) {
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            }
+        }
+    }
+
+    private void copyRecursive(File src, File dst) throws IOException {
+        if (src.isDirectory()) {
+            if (!dst.exists() && !dst.mkdirs()) {
+                throw new IOException("Cannot create dir " + dst);
+            }
+            File[] children = src.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    copyRecursive(child, new File(dst, child.getName()));
+                }
+            }
+        } else {
+            copyFileOrDir(src, dst);
+        }
+    }
+
+    /**
+     * 递归删除文件或目录（用于跨文件系统移动失败后的回退）。
+     */
+    private void deleteRecursively(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        file.delete();
+    }
+
     public void gotoDocApp(String method,String title){
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try{
+                    if(FileUtils.PASTE_FILE.equals(method)){
+                      pasteFromClipboard();
+                        
+                         return ;
+                    }
                     // boolean isActivityRunning = FileUtils.isActivityRunning(Launcher.this,"com.android.documentsui","com.android.documentsui.ui.OpenLinuxAppActivity");
                     // Log.i(TAG, "bellaLauncher gotoDocApp  method: " + method + ", title "+title + ",isActivityRunning "+isActivityRunning);
                     idocAidl.basicIpcMethon(method,title);
