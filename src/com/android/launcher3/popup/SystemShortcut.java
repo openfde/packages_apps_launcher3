@@ -19,6 +19,7 @@ import android.graphics.Rect;
 import android.os.Process;
 import android.os.UserHandle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.ImageView;
@@ -67,7 +68,6 @@ import android.content.DialogInterface;
 import com.android.launcher3.util.FileUtils;
 import android.view.Window;
 import android.view.WindowManager;
-import com.android.launcher3.popup.PopupContainerWithArrow;
 import android.view.Display;
 import android.view.WindowManager;
 
@@ -410,18 +410,33 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
             }).create();
             alertDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
 
-            alertDialog.show();
             Window window = alertDialog.getWindow();
             WindowManager m = launcher.getWindowManager();
             float scale = FileUtils.getDpiScale(launcher);
+            int dialogWidth = (int)(WINDOW_DELETE_WIDTH*scale);
+            int dialogHeight = (int)(WINDOW_DELETE_HEIGHT*scale);
             Display d = m.getDefaultDisplay();
             if (window != null) {
                 WindowManager.LayoutParams params = window.getAttributes();
-                window.setLayout((int)(WINDOW_DELETE_WIDTH*scale), (int)(WINDOW_DELETE_HEIGHT*scale));
-                params.x = (int) (PopupContainerWithArrow.x - d.getWidth()/2);
-                params.y = (int ) (PopupContainerWithArrow.y - d.getHeight()/2);
+                window.setLayout(dialogWidth, dialogHeight);
+                // Anchor the dialog to where the user actually clicked. The popup menu is rendered
+                // in an overlay window, so PopupContainerWithArrow.x/y (recorded only by the
+                // drag-layer touch pipeline) are stale here; use the clicked view's on-screen
+                // location instead.
+                int[] location = new int[2];
+                view.getLocationOnScreen(location);
+                int anchorX = location[0] + view.getWidth() / 2;
+                int anchorY = location[1] + view.getHeight() / 2;
+                // Use an explicit gravity so that x/y are unambiguous (dialogs otherwise center
+                // themselves and the offsets would be interpreted relative to the screen center).
+                params.gravity = Gravity.TOP | Gravity.LEFT;
+                params.x = Math.max(0, Math.min(anchorX - dialogWidth / 2,
+                        d.getWidth() - dialogWidth));
+                params.y = Math.max(0, Math.min(anchorY - dialogHeight / 2,
+                        d.getHeight() - dialogHeight));
                 window.setAttributes(params);
             }
+            alertDialog.show();
             
         }
     }
