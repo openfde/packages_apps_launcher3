@@ -153,7 +153,7 @@ public class FileUtils {
 
     public static final String FDE_APP_FUSION = "fde.app_fusion";
 
-    public static final String OPEN_APP_FUSION = "1";
+    public static final String OPEN_APP_FUSION = "0";
 
     public static final String FDE_INIT_DONE = "persist.fde.init.done";
     
@@ -1222,9 +1222,9 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
     public static boolean isOpenAppFusion(){
         String shareDesktopStr = getSystemProperty(FileUtils.FDE_APP_FUSION,FileUtils.OPEN_APP_FUSION);
         if(FileUtils.OPEN_APP_FUSION.equals(shareDesktopStr)){
-            return true ;
+            return false ;
         }
-        return false ;
+        return true ;
     }
 
     public static float getDpiScale(Context context) {

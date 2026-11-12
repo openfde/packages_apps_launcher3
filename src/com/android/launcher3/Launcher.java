@@ -533,6 +533,7 @@ public class Launcher extends StatefulActivity<LauncherState>
         mAppWidgetHolder.setAppWidgetRemovedCallback(
                 appWidgetId -> getWorkspace().removeWidget(appWidgetId));
 
+        DbUtils.deleteAllAndroidAppFromDatabase(getModel().getModelDbController());
         setupViews();
         updateDisallowBack();
 
