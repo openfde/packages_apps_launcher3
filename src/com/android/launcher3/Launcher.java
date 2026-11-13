@@ -2014,6 +2014,8 @@ public class Launcher extends StatefulActivity<LauncherState>
         int keyCode = event.getKeyCode();
         Log.d("KeyTest", "dispatchKeyEvent：" + keyCode);
         TestLogging.recordKeyEvent(TestProtocol.SEQUENCE_MAIN, "Key event", event);
+        // Track the current Ctrl/Shift state for desktop-style selection of home screen items.
+        mWorkspaceItemClickHandler.onKeyEvent(event);
         return (event.getKeyCode() == KeyEvent.KEYCODE_HOME) || tryHandleEscapeKey(event)
                     || super.dispatchKeyEvent(event);
     }
@@ -2050,6 +2052,9 @@ public class Launcher extends StatefulActivity<LauncherState>
                 break;
         }
         TestLogging.recordMotionEvent(TestProtocol.SEQUENCE_MAIN, "Touch event", ev);
+        // Forward the modifier keys (Ctrl/Shift) held during a mouse click so the home screen
+        // click handler can apply desktop-style selection behavior.
+        mWorkspaceItemClickHandler.onDispatchTouchEvent(ev);
         return super.dispatchTouchEvent(ev);
     }
 

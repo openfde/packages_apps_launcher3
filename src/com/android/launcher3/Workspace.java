@@ -1762,7 +1762,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
      * Clears the selection of all the items on the home screen.
      */
     public void clearItemSelection() {
-        mLauncher.getWorkspaceItemClickHandler().cancelPendingSelection();
+        mLauncher.getWorkspaceItemClickHandler().clearSelection();
         mapOverItems((info, view) -> {
             view.setSelected(false);
             return false;
