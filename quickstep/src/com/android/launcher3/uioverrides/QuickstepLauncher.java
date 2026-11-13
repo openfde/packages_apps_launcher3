@@ -260,9 +260,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import com.android.launcher3.model.data.MessageEvent;
 
 import static com.android.launcher3.popup.SystemShortcut.APP_OPEN;
 import static com.android.launcher3.popup.SystemShortcut.APP_OPEN_TYPE;
@@ -1792,8 +1789,4 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         return getApplicationInfo().isOnBackInvokedCallbackEnabled();
     }
 
-    @Subscribe
-    public void onMessageEvent(MessageEvent event) {
-
-    }
 }
