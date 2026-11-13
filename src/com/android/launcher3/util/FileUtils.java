@@ -469,7 +469,7 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
                     Log.i(TAG, "createAllAndroidIconToLinux md5 : " + md5 + ",path: " + path + ",packName: " + appInfo.packageName);
                     File file = new File(path);
                     if (!file.exists() && !path.contains(" ")) {
-                        drawableToPng(context, icon, path);
+                        drawableToWatermarkPng(context, icon, path);
                     }
 
                     String filePath =  PATH_ID_DESKTOP + md5+"_fde.png";
@@ -494,7 +494,7 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
                 Log.d(TAG, "createAllAndroidIconToLinux md5 : " + md5 + ",path: " + path + ",packageName: " + packageName + ",appName: " + appName);
                 File file = new File(path);
                 if (!file.exists() && !path.contains(" ")) {
-                    drawableToPng(context, icon, path);
+                    drawableToWatermarkPng(context, icon, path);
                 }
 
                 String filePath =  PATH_ID_DESKTOP + md5+"_fde.png";
@@ -521,8 +521,11 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
     return null;
 }
 
+
+    /**
+     * draw android desktop png
+     */
     public static void drawableToPng(Context context,String packageName, Drawable drawable) {
-        Log.w(TAG,"drawableToPng packageName： "+packageName);
         Bitmap bitmapT = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
                 drawable.getIntrinsicHeight(), drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565);
 
@@ -546,7 +549,7 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
                 }else if(drawable instanceof PaintDrawable){
                 }else if(drawable instanceof AnimationDrawable){
                 }else{
-                    Log.w(TAG,"drawableToPng drawable is other "+packageName);
+                    Log.w(TAG,"drawableToPng drawable is other 2 "+packageName);
                 }
             } 
         }
@@ -573,34 +576,16 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
         }
     }
 
-    /**
-     * bitmap to round corner bitmap
+     /**
+     * draw linux desktop png
      */
-    public static Bitmap getRoundedCornerBitmap(Bitmap bitmap, float roundPx) {
-        Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(output);
-
-        final Paint paint = new Paint();
-        final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        final RectF rectF = new RectF(rect);
-
-        paint.setAntiAlias(true);
-        
-        canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
-
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-        
-        canvas.drawBitmap(bitmap, rect, rect, paint);
-
-        return output;
-    }
-
-    public static void drawableToPng(Context context, Drawable drawable, String filePath) {
+    public static void drawableToWatermarkPng(Context context, Drawable drawable, String filePath) {
         Bitmap bitmapT = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
                 drawable.getIntrinsicHeight(), drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565);
 
         Bitmap bitmap;
         int size = 200 ;
+
         if (drawable instanceof AdaptiveIconDrawable) {
             AdaptiveIconDrawable adaptiveIconDrawable = (AdaptiveIconDrawable) drawable;
             bitmapT = adaptiveIconToBitmap(adaptiveIconDrawable);
@@ -616,6 +601,12 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
                 Bitmap b2 = vectorToBitmap(context, R.mipmap.bg_android);
                 bitmapT = scaleBitmap(bitmapT, size, size);
                 bitmapT = getRoundedCornerBitmap(bitmapT,16);
+                b2 = scaleBitmap(b2, size, size);
+                bitmap = overlayBitmaps(bitmapT,b2);
+            }else if(drawable instanceof VectorDrawable){
+                bitmapT = vectorDrawableToBitmap(drawable);
+                bitmapT = getRoundedCornerBitmap(bitmapT,16);
+                Bitmap b2 = vectorToBitmap(context, R.mipmap.bg_android);
                 b2 = scaleBitmap(b2, size, size);
                 bitmap = overlayBitmaps(bitmapT,b2);
             } else {
@@ -648,6 +639,30 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
 
     }
 
+    /**
+     * bitmap to round corner bitmap
+     */
+    public static Bitmap getRoundedCornerBitmap(Bitmap bitmap, float roundPx) {
+        Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        final Paint paint = new Paint();
+        final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        final RectF rectF = new RectF(rect);
+
+        paint.setAntiAlias(true);
+        
+        canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
+
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        
+        canvas.drawBitmap(bitmap, rect, rect, paint);
+
+        return output;
+    }
+
+   
+
     private static List<ApplicationInfo> getAllApp(Context context) {
         LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
         UserManager userManager = (UserManager) context.getSystemService(Context.USER_SERVICE);
@@ -675,11 +690,11 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
     public static void createLinuxDesktopFile(Context context , String title ,String packageName){
         createDesktopDir(PATH_ID_DESKTOP);
         String documentId = getAllDesktopPath();
-        if(isOpenAppFusion() == false){
+        if(!isOpenAppFusion()){
             documentId = getAllDocumentPath()+".temp/";
         }
         try{    
-            Log.i(TAG,"createLinuxDesktopFile title:  "+title + ",packageName: "+packageName);
+            Log.i(TAG,"createLinuxDesktopFile title:  "+title + ",packageName: "+packageName + ",documentId "+documentId);
 
             String pathDesktop = documentId+""+ packageName+"_fde.desktop";
             String picPath = getIconPath()+packageName+".png" ;
@@ -1220,7 +1235,7 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
     }
 
     public static boolean isOpenAppFusion(){
-        String shareDesktopStr = getSystemProperty(FileUtils.FDE_APP_FUSION,FileUtils.OPEN_APP_FUSION);
+        String shareDesktopStr = getSystemProperty(FileUtils.FDE_APP_FUSION,"1");
         if(FileUtils.OPEN_APP_FUSION.equals(shareDesktopStr)){
             return false ;
         }

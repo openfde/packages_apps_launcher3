@@ -493,7 +493,7 @@ public class Launcher extends StatefulActivity<LauncherState>
     @TargetApi(Build.VERSION_CODES.S)
     protected void onCreate(Bundle savedInstanceState) {
         FileUtils.setSystemProperty("launcher_time",System.currentTimeMillis()+"");
-        // EventBus.getDefault().register(this);
+        EventBus.getDefault().register(this);
 
 
         FileUtils.createDesktopDir(FileUtils.PATH_ID_DESKTOP);
@@ -1695,7 +1695,7 @@ public class Launcher extends StatefulActivity<LauncherState>
     public void onDestroy() {
         super.onDestroy();
         ACTIVITY_TRACKER.onContextDestroyed(this);
-        // EventBus.getDefault().unregister(this);
+        EventBus.getDefault().unregister(this);
         unbindService(serviceConnection);
         if (mNaturalScrollingChangedSafeCloseable != null) {
             mNaturalScrollingChangedSafeCloseable.close();
@@ -3824,6 +3824,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                     String IconPath = FileUtils.getLinuxPrefixPath() + mp.get("IconPath").toString();
                     String desc = execPath + "###"+IconPath ;
                     String packageName = getPackageName();
+                    String filePath = "";
                     
                     if(IsAndroidApp){
                         packageName = execPath.replaceAll("fde_launch ","");
@@ -3831,7 +3832,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                             //1、Linux端拷贝的应用 title是带.desktop的
                             found = listApps.stream().anyMatch(item -> fileName.equals(StringUtils.ToString(item.get("title"))));
 
-                            String filePath =  FileUtils.PATH_ID_DESKTOP + packageName+"_fde.png";
+                            filePath =  FileUtils.getIconPath() + packageName+"_fde.png";
                             File file = new File(filePath);
                             if(!file.exists()){
                                 boolean isAppInstalled  = FileUtils.isAppInstalled(Launcher.this,packageName);
@@ -3842,17 +3843,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                                     FileUtils.drawableToPng(this,packageName,icon);
                                 }
                             }
-
-                            // if(!found){
-                            //     //2、android端自己生成的title是应用名,则根据appWidgetProvider字段去匹配且itemType=0包名
-                            //     final String  fName = packageName;
-                            //     final String  fdeName = packageName+"_fde.desktop";
-                            //     Log.d(TAG, "refreshDesktopFiles-addLinuxApps: fileName "+fileName +",fName "+fName );
-                            //     //1、刚生成的_fde.desktop  ,从Linux拷贝出来的desktop文件
-                            //     found = listApps.stream().anyMatch(item ->  !fdeName.equals(StringUtils.ToString(item.get("title"))) && fName.equals(StringUtils.ToString(item.get("appWidgetProvider"))) && StringUtils.ToInt(item.get("itemType"),-1) == 0);
-                            // }
                         } 
-                        Log.d(TAG, "refreshDesktopFiles-addLinuxApps: fileName: "+fileName + ",found "+found +",packageName: "+packageName );
                     }else{
                         if(listApps != null){
                             found = listApps.stream().anyMatch(item -> fileName.equals(item.get("title").toString()));

@@ -86,3 +86,20 @@
     <fields>;
     <init>(...);
 }
+
+# Greenrobot EventBus.
+# Subscribers are discovered by runtime reflection on the @Subscribe annotation,
+# so the annotation attributes must survive minification and every @Subscribe
+# method must be kept (otherwise EventBus.register() throws:
+# "no public methods with the @Subscribe annotation").
+-keepattributes *Annotation*
+-keepclassmembers class * {
+    @org.greenrobot.eventbus.Subscribe <methods>;
+}
+-keep enum org.greenrobot.eventbus.ThreadMode { *; }
+
+# Only required if AsyncExecutor is used to keep the event classes derived
+# from ThrowableFailureEvent.
+-keepclassmembers class * extends org.greenrobot.eventbus.util.ThrowableFailureEvent {
+    <init>(java.lang.Throwable);
+}

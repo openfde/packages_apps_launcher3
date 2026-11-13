@@ -36,6 +36,9 @@ import com.android.launcher3.pm.InstallSessionTracker
 import com.android.launcher3.pm.PackageInstallInfo
 import com.android.launcher3.util.PackageUserKey
 import java.util.function.Consumer
+import org.greenrobot.eventbus.EventBus;
+import com.android.launcher3.util.FileUtils;
+import com.android.launcher3.model.data.MessageEvent;
 
 /**
  * Implementation of {@link LauncherApps#Callbacks} which converts various events to corresponding
@@ -63,6 +66,7 @@ class ModelLauncherCallbacks(private var taskExecutor: Consumer<ModelUpdateTask>
 
     override fun onPackageRemoved(packageName: String, user: UserHandle) {
         FileLog.d(TAG, "onPackageRemoved triggered for packageName=$packageName, user=$user")
+        EventBus.getDefault().post(MessageEvent(FileUtils.REMOVE_APP, packageName));
         taskExecutor.accept(PackageTaskFactory.appsRemoved(user, setOf(packageName)))
     }
 
