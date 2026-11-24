@@ -205,7 +205,7 @@ constructor(
      *
      * Supported types:
      *  - "title": sorted by item title (case-insensitive)
-     *  - "itemType": sorted by [ItemInfo.itemType], then by title
+     *  - "itemType": sorted by [ItemInfo.itemType], then by file suffix (extension), then by title
      *  - "time": sorted by the modified time of the underlying desktop file (newest first)
      *
      * The items are laid out column by column (matching the order used by [FileUtils.getAllIdlePoints]).
@@ -232,9 +232,14 @@ constructor(
                 if (itemTypeCompare != 0) {
                     itemTypeCompare
                 } else {
-                    val title1 = p1.title?.toString() ?: ""
-                    val title2 = p2.title?.toString() ?: ""
-                    title1.compareTo(title2, ignoreCase = true)
+                    val suffixCompare = getItemSuffix(p1).compareTo(getItemSuffix(p2), ignoreCase = true)
+                    if (suffixCompare != 0) {
+                        suffixCompare
+                    } else {
+                        val title1 = p1.title?.toString() ?: ""
+                        val title2 = p2.title?.toString() ?: ""
+                        title1.compareTo(title2, ignoreCase = true)
+                    }
                 }
             }
             "time" -> workspaceItems.sortWith { p1, p2 ->
@@ -265,6 +270,19 @@ constructor(
             }
         }
         return info.id.toLong()
+    }
+
+    /**
+     * Returns the file suffix (extension) of the item's title, or an empty string if it has none.
+     * e.g. "report.pdf" -> "pdf", "notes" -> ""
+     */
+    private fun getItemSuffix(info: ItemInfo): String {
+        val title = info.title?.toString()?.trim() ?: ""
+        val dotIndex = title.lastIndexOf('.')
+        if (dotIndex > 0 && dotIndex < title.length - 1) {
+            return title.substring(dotIndex + 1)
+        }
+        return ""
     }
 
     private fun startLoader(

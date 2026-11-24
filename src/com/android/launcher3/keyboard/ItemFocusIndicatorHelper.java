@@ -41,6 +41,12 @@ public abstract class ItemFocusIndicatorHelper<T> implements AnimatorUpdateListe
     private static final float MIN_VISIBLE_ALPHA = 0.2f;
     private static final long ANIM_DURATION = 150;
 
+    /**
+     * Alpha multiplier for the translucent fill of the focus box. Kept in sync with the fill used
+     * by the workspace selection highlight (Utilities.drawWorkspaceItemSelectionHighlight).
+     */
+    private static final float SELECTION_FILL_ALPHA = 0.35f;
+
     public static final FloatProperty<ItemFocusIndicatorHelper> ALPHA =
             new FloatProperty<ItemFocusIndicatorHelper>("alpha") {
 
@@ -77,6 +83,15 @@ public abstract class ItemFocusIndicatorHelper<T> implements AnimatorUpdateListe
     protected final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mInnerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int mMaxAlpha;
+    /**
+     * When true, draws a single rounded selection box (translucent fill + opaque outline),
+     * matching the mouse-click selection highlight, instead of the double stroke focus outline.
+     */
+    private final boolean mSelectionBox;
+    /**
+     * Alpha multiplier applied to the translucent fill relative to the opaque outline.
+     */
+    private final float mFillAlpha;
 
     private final Rect mDirtyRect = new Rect();
     private boolean mIsDirty = false;
@@ -101,19 +116,25 @@ public abstract class ItemFocusIndicatorHelper<T> implements AnimatorUpdateListe
 
         mPaint.setColor(0xFF000000 | colors[0]);
         if (Flags.enableFocusOutline() && colors.length > 1) {
+            // Draw a single rounded selection box matching the mouse-click selection highlight
+            // (UtilitiesKt.drawWorkspaceItemSelectionHighlight): a translucent fill plus an
+            // opaque outline, instead of the previous double (outer square + inner rounded) stroke.
+            mSelectionBox = true;
+            mFillAlpha = SELECTION_FILL_ALPHA;
+
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setStrokeWidth(container.getResources().getDimensionPixelSize(
                     R.dimen.focus_outline_stroke_width));
             mRadius = container.getResources().getDimensionPixelSize(
-                    R.dimen.focus_outline_radius);
+                    R.dimen.grid_visualization_rounding_radius);
 
-            mInnerPaint.setStyle(Paint.Style.STROKE);
-            mInnerPaint.setColor(0xFF000000 | colors[1]);
-            mInnerPaint.setStrokeWidth(container.getResources().getDimensionPixelSize(
-                    R.dimen.focus_outline_stroke_width));
+            mInnerPaint.setStyle(Paint.Style.FILL);
+            mInnerPaint.setColor(0xFF000000 | colors[0]);
             mInnerRadius = container.getResources().getDimensionPixelSize(
-                    R.dimen.focus_inner_outline_radius);
+                    R.dimen.grid_visualization_rounding_radius);
         } else {
+            mSelectionBox = false;
+            mFillAlpha = 1f;
             mPaint.setStyle(Paint.Style.FILL);
             mRadius = container.getResources().getDimensionPixelSize(
                     R.dimen.grid_visualization_rounding_radius);
@@ -127,7 +148,7 @@ public abstract class ItemFocusIndicatorHelper<T> implements AnimatorUpdateListe
     protected void setAlpha(float alpha) {
         mAlpha = alpha;
         mPaint.setAlpha((int) (mAlpha * mMaxAlpha));
-        mInnerPaint.setAlpha((int) (mAlpha * mMaxAlpha));
+        mInnerPaint.setAlpha((int) (mAlpha * mMaxAlpha * mFillAlpha));
     }
 
     @Override
@@ -157,6 +178,26 @@ public abstract class ItemFocusIndicatorHelper<T> implements AnimatorUpdateListe
         if (newRect != null) {
             if (Flags.enableFocusOutline()) {
                 int strokeWidth = (int) mPaint.getStrokeWidth();
+                if (mSelectionBox) {
+                    // Draw a single rounded selection box: a translucent fill plus an opaque
+                    // outline. Stroke is centered on the rect edge (half inside, half outside),
+                    // so inset the rect by the full stroke width to keep the outline entirely
+                    // within the view and leave a small gap between the item and the box.
+                    // Keep the dirty rect covering the original item bounds so that the whole
+                    // box is redrawn while the focus animation moves it around.
+                    mDirtyRect.set(newRect);
+                    newRect.inset(strokeWidth, strokeWidth);
+
+                    c.drawRoundRect((float) newRect.left, (float) newRect.top,
+                            (float) newRect.right, (float) newRect.bottom,
+                            mInnerRadius, mInnerRadius, mInnerPaint);
+
+                    c.drawRoundRect((float) newRect.left, (float) newRect.top,
+                            (float) newRect.right, (float) newRect.bottom,
+                            mRadius, mRadius, mPaint);
+                    mIsDirty = true;
+                    return;
+                }
                 // Inset for inner outline. Stroke is drawn with half outside and half inside
                 // the view. Inset by half stroke width to move the whole stroke inside the view
                 // and avoid other views occluding it. Inset one more stroke width to leave space

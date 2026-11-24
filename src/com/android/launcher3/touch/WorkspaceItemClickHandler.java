@@ -30,10 +30,8 @@ import android.view.ViewConfiguration;
 
 import androidx.annotation.Nullable;
 
-import com.android.launcher3.BubbleTextView;
 import com.android.launcher3.Launcher;
-import com.android.launcher3.apppairs.AppPairIcon;
-import com.android.launcher3.folder.FolderIcon;
+import com.android.launcher3.UtilitiesKt;
 import com.android.launcher3.model.data.ItemInfo;
 
 import java.util.ArrayList;
@@ -163,6 +161,8 @@ public class WorkspaceItemClickHandler implements OnClickListener {
             cancelPendingSelection();
             setViewSelected(v, false);
             mSelectedViews.remove(v);
+            // A double tap launches the item, so remove any lingering keyboard focus highlight.
+            v.clearFocus();
             mDefaultHandler.onClick(v);
             return;
         }
@@ -218,9 +218,14 @@ public class WorkspaceItemClickHandler implements OnClickListener {
         if (view.isSelected()) {
             setViewSelected(view, false);
             mSelectedViews.remove(view);
+            // The item is no longer selected, also drop its keyboard focus highlight.
+            view.clearFocus();
         } else {
             setViewSelected(view, true);
             mSelectedViews.add(view);
+            // Move keyboard focus along with the selection, so that any previous Tab-key highlight
+            // disappears and both highlights stay in sync.
+            moveFocusTo(view);
         }
         mAnchorView = view;
     }
@@ -251,6 +256,8 @@ public class WorkspaceItemClickHandler implements OnClickListener {
                 mSelectedViews.add(item);
             }
         }
+        // Move keyboard focus along with the selection to keep the two highlights in sync.
+        moveFocusTo(target);
     }
 
     /** Selects only the given item, deselecting everything else, and marks it as the anchor. */
@@ -259,6 +266,8 @@ public class WorkspaceItemClickHandler implements OnClickListener {
         setViewSelected(view, true);
         mSelectedViews.add(view);
         mAnchorView = view;
+        // Move keyboard focus along with the selection to keep the two highlights in sync.
+        moveFocusTo(view);
     }
 
     private void selectPendingView() {
@@ -275,6 +284,17 @@ public class WorkspaceItemClickHandler implements OnClickListener {
         if (view.isSelected() != selected) {
             view.setSelected(selected);
             view.invalidate();
+        }
+    }
+
+    /**
+     * Moves keyboard focus to the given view, so that the selection highlight and the Tab-key
+     * focus highlight stay in sync: making a new mouse selection clears the previous Tab-key
+     * highlight (the previously focused item loses focus and stops drawing its box).
+     */
+    private static void moveFocusTo(View view) {
+        if (!view.isFocused()) {
+            view.requestFocus();
         }
     }
 
@@ -316,15 +336,6 @@ public class WorkspaceItemClickHandler implements OnClickListener {
      * which a tap should select instead of launching.
      */
     private static boolean isHomeScreenItem(View v) {
-        if (!(v instanceof BubbleTextView || v instanceof FolderIcon || v instanceof AppPairIcon)) {
-            return false;
-        }
-        if (!(v.getTag() instanceof ItemInfo info)) {
-            return false;
-        }
-        int container = info.container;
-        return container == CONTAINER_DESKTOP
-                || container == CONTAINER_HOTSEAT
-                || container == CONTAINER_HOTSEAT_PREDICTION;
+        return UtilitiesKt.isHomeScreenItemView(v);
     }
 }
