@@ -194,9 +194,9 @@ class AppPairIcon :
     }
 
     override fun dispatchDraw(canvas: Canvas) {
-        // Draw selection highlight before super.dispatchDraw() so that it appears behind the title
-        // text.
-        if (isSelected) {
+        // Draw selection/focus highlight before super.dispatchDraw() so that it appears behind the
+        // title text. The Tab-key focus uses the same highlight as the mouse selection.
+        if (isSelected || isFocused) {
             drawWorkspaceItemSelectionHighlight(canvas, this)
         }
         super.dispatchDraw(canvas)

@@ -21,6 +21,7 @@ import android.view.View;
 
 import com.android.launcher3.Flags;
 import com.android.launcher3.PagedView;
+import com.android.launcher3.UtilitiesKt;
 
 /**
  * {@link FocusIndicatorHelper} for a generic view group.
@@ -38,6 +39,13 @@ public class ViewGroupFocusHelper extends FocusIndicatorHelper {
     @Override
     protected boolean shouldDraw(View item) {
         if (!item.hasWindowFocus()) {
+            return false;
+        }
+
+        // Home screen items (desktop/hotseat icons, folders and app pairs) draw their own
+        // selection-style highlight for mouse selection and Tab-key focus, so that both boxes are
+        // always identical. Skip the generic focus outline for them to avoid a double box.
+        if (UtilitiesKt.isHomeScreenItemView(item)) {
             return false;
         }
 

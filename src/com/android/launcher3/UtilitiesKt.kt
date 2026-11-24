@@ -16,16 +16,21 @@
 
 package com.android.launcher3
 
+import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewParent
+import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
+import com.android.launcher3.LauncherSettings.Favorites
 import com.android.launcher3.apppairs.AppPairIcon
 import com.android.launcher3.folder.FolderIcon
 import com.android.launcher3.model.data.ItemInfo
+import com.android.launcher3.util.WallpaperColorHints
 
 object UtilitiesKt {
 
@@ -179,6 +184,39 @@ object UtilitiesKt {
     private const val HIGHLIGHT_CORNER_RADIUS = 8f
 
     /**
+     * Returns the complementary color of the wallpaper's primary color. The complement is opposite
+     * the wallpaper color on the color wheel, so the selection/focus highlight deliberately clashes
+     * with (撞色) and hence stands out from the desktop wallpaper. Falls back to
+     * [R.color.materialColorPrimaryFixed] when the wallpaper color is not available yet.
+     */
+    @JvmStatic
+    @ColorInt
+    fun getWallpaperComplementColor(context: Context): Int {
+        val wallpaperColor =
+            WallpaperColorHints.get(context).colors?.primaryColor?.toArgb()
+                ?: return context.getColor(R.color.materialColorPrimaryFixed)
+        val hsv = FloatArray(3)
+        Color.colorToHSV(wallpaperColor, hsv)
+        hsv[0] = (hsv[0] + 180f) % 360f
+        return Color.HSVToColor(Color.alpha(wallpaperColor), hsv)
+    }
+
+    /**
+     * Returns true if the given view is a home screen item (icon, folder or app pair placed on the
+     * desktop/hotseat) which draws its own selection/focus highlight. Used both by the click
+     * selection handler and by the keyboard focus drawing, so that the Tab-key box and the
+     * mouse-click box always look identical.
+     */
+    @JvmStatic
+    fun isHomeScreenItemView(view: View): Boolean {
+        if (view !is BubbleTextView && view !is FolderIcon && view !is AppPairIcon) return false
+        val info = view.tag as? ItemInfo ?: return false
+        return info.container == Favorites.CONTAINER_DESKTOP
+            || info.container == Favorites.CONTAINER_HOTSEAT
+            || info.container == Favorites.CONTAINER_HOTSEAT_PREDICTION
+    }
+
+    /**
      * Draws a highlight around a workspace item view to indicate selection. This includes a
      * semi-transparent filled rounded rectangle and a more opaque outline. The highlight is drawn
      * around the content of the item, so that the item appears centered inside it.
@@ -188,11 +226,13 @@ object UtilitiesKt {
      */
     @JvmStatic
     fun drawWorkspaceItemSelectionHighlight(canvas: Canvas, view: View) {
-        val primaryFixedColor = view.context.getColor(R.color.materialColorPrimaryFixed)
+        // Take the complementary color of the wallpaper primary color, so the selection box always
+        // clashes with (撞色) and stands out from the desktop wallpaper.
+        val selectionColor = getWallpaperComplementColor(view.context)
 
         val backgroundPaint =
             Paint().apply {
-                color = ColorUtils.setAlphaComponent(primaryFixedColor, (255 * 0.35f).toInt())
+                color = ColorUtils.setAlphaComponent(selectionColor, (255 * 0.35f).toInt())
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
@@ -218,16 +258,16 @@ object UtilitiesKt {
 
         val outlinePaint =
             Paint().apply {
-                color = primaryFixedColor
+                color = selectionColor
                 style = Paint.Style.STROKE
                 strokeWidth = 2f
                 isAntiAlias = true
             }
-        canvas.drawRoundRect(
-            backgroundRect,
-            HIGHLIGHT_CORNER_RADIUS,
-            HIGHLIGHT_CORNER_RADIUS,
-            outlinePaint,
-        )
+        // canvas.drawRoundRect(
+        //     backgroundRect,
+        //     HIGHLIGHT_CORNER_RADIUS,
+        //     HIGHLIGHT_CORNER_RADIUS,
+        //     outlinePaint,
+        // )
     }
 }

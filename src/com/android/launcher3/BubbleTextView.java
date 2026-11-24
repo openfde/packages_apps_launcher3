@@ -1128,8 +1128,12 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
     protected void drawSelectedBackgroundIfNecessary(Canvas canvas) {
         // FolderIcons and AppPairIcons draw the workspace highlight themselves.
-        if (isSelected() && !(getParent() instanceof FolderIcon)
-                && !(getParent() instanceof AppPairIcon)) {
+        // Draw for both mouse selection (isSelected) and Tab-key focus (isFocused), using the same
+        // highlight so that the two boxes are always identical in size and style.
+        if ((isSelected() || isFocused())
+                && !(getParent() instanceof FolderIcon)
+                && !(getParent() instanceof AppPairIcon)
+                && UtilitiesKt.isHomeScreenItemView(this)) {
             drawWorkspaceItemSelectionHighlight(canvas, this);
         }
     }

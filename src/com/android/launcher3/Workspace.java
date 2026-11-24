@@ -1767,6 +1767,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             view.setSelected(false);
             return false;
         });
+        // Also drop the keyboard focus so that a Tab-key highlight does not linger after a mouse
+        // interaction (keeps the mouse and Tab-key selections in sync).
+        mLauncher.getDragLayer().clearFocus();
     }
 
     public void onWallpaperTap(MotionEvent ev) {
