@@ -511,14 +511,17 @@ public static synchronized Point getMaxPoint(ModelDbController dbController){
     }
 
     public static Bitmap pngToBitmap(Context context, String packageName) {
-    String path = SPUtils.getUserInfo(context,packageName);
-    try {
-        return BitmapFactory.decodeFile(path);
-    } catch (Exception e) {
-        Log.e(TAG, "pngToBitmap: " + e.toString());
-        e.printStackTrace();
-    }
-    return null;
+        String path = SPUtils.getUserInfo(context,packageName);
+        try {
+            if(TextUtils.isEmpty(path)){
+                path = getIconPath()+packageName+"_fde.png";
+            }
+            return BitmapFactory.decodeFile(path);
+        } catch (Exception e) {
+            Log.e(TAG, "pngToBitmap: " + e.toString());
+            e.printStackTrace();
+        }
+        return null;
 }
 
 
